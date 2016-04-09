@@ -574,7 +574,7 @@ class PoissonEditor(HasTraits):
         """
         partitions = self.datamodel.partition()
 
-        filename = r'C:\Users\Eelco\Dropbox\Escheresque\examples\part{0}.stl'
+        filename = r'C:\Users\Eelco\Dropbox\Git\Escheresque\data\part{0}.stl'
 
         if True:
             from mayavi import mlab

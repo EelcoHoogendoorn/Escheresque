@@ -2,32 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="341ede36-3fbd-4c4a-b472-8828e718d97d" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/escheresque/poisson.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/escheresque/testgrid.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.gitignore" afterPath="$PROJECT_DIR$/.gitignore" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/environment.yml" afterPath="$PROJECT_DIR$/environment.yml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/brushes.py" afterPath="$PROJECT_DIR$/escheresque/brushes.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/computational_geometry.py" afterPath="$PROJECT_DIR$/escheresque/computational_geometry.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/datamodel.py" afterPath="$PROJECT_DIR$/escheresque/datamodel.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/geometry.py" afterPath="$PROJECT_DIR$/escheresque/geometry.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/group/dihedral.py" afterPath="$PROJECT_DIR$/escheresque/group/dihedral.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/group/group.py" afterPath="$PROJECT_DIR$/escheresque/group/group.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/group/icosahedral.py" afterPath="$PROJECT_DIR$/escheresque/group/icosahedral.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/group/octahedral.py" afterPath="$PROJECT_DIR$/escheresque/group/octahedral.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/group/tetrahedral.py" afterPath="$PROJECT_DIR$/escheresque/group/tetrahedral.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/harmonics.py" afterPath="$PROJECT_DIR$/escheresque/harmonics.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/interface/edge_editor.py" afterPath="$PROJECT_DIR$/escheresque/interface/edge_editor.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/interface/height_editor.py" afterPath="$PROJECT_DIR$/escheresque/interface/height_editor.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/interface/interface.py" afterPath="$PROJECT_DIR$/escheresque/interface/interface.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/interface/selectgroup.py" afterPath="$PROJECT_DIR$/escheresque/interface/selectgroup.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/main.py" afterPath="$PROJECT_DIR$/escheresque/main.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/multicomplex.py" afterPath="$PROJECT_DIR$/escheresque/multicomplex.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/multigrid.py" afterPath="$PROJECT_DIR$/escheresque/multigrid.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/reaction_diffusion.py" afterPath="$PROJECT_DIR$/escheresque/reaction_diffusion.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/stl.py" afterPath="$PROJECT_DIR$/escheresque/stl.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/subdivision.py" afterPath="$PROJECT_DIR$/escheresque/subdivision.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/topology.py" afterPath="$PROJECT_DIR$/escheresque/topology.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/util.py" afterPath="$PROJECT_DIR$/escheresque/util.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/escheresque/interface/poisson_editor.py" afterPath="$PROJECT_DIR$/escheresque/interface/poisson_editor.py" />
     </list>
     <ignored path="Escheresque.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -68,11 +46,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="computational_geometry.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="computational_geometry.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/escheresque/computational_geometry.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="262">
-              <caret line="382" column="9" selection-start-line="382" selection-start-column="9" selection-end-line="382" selection-end-column="9" />
+            <state relative-caret-position="526">
+              <caret line="55" column="43" selection-start-line="55" selection-start-column="43" selection-end-line="55" selection-end-column="43" />
               <folding>
                 <element signature="e#1131#1157#0" expanded="true" />
               </folding>
@@ -80,11 +58,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="environment.yml" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/environment.yml">
+      <file leaf-file-name=".gitignore" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/.gitignore">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="495">
-              <caret line="15" column="2" selection-start-line="15" selection-start-column="2" selection-end-line="15" selection-end-column="2" />
+            <state relative-caret-position="858">
+              <caret line="217" column="5" selection-start-line="217" selection-start-column="5" selection-end-line="217" selection-end-column="5" />
               <folding />
             </state>
           </provider>
@@ -93,8 +71,8 @@
       <file leaf-file-name="poisson_editor.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/escheresque/interface/poisson_editor.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="413">
-              <caret line="589" column="48" selection-start-line="589" selection-start-column="48" selection-end-line="589" selection-end-column="48" />
+            <state relative-caret-position="149">
+              <caret line="582" column="23" selection-start-line="582" selection-start-column="23" selection-end-line="582" selection-end-column="23" />
               <folding>
                 <element signature="e#408#436#0" expanded="true" />
               </folding>
@@ -178,8 +156,9 @@
         <option value="$PROJECT_DIR$/escheresque/group/octahedral.py" />
         <option value="$PROJECT_DIR$/escheresque/group/tetrahedral.py" />
         <option value="$PROJECT_DIR$/escheresque/main.py" />
-        <option value="$PROJECT_DIR$/escheresque/computational_geometry.py" />
         <option value="$PROJECT_DIR$/escheresque/interface/poisson_editor.py" />
+        <option value="$PROJECT_DIR$/escheresque/computational_geometry.py" />
+        <option value="$PROJECT_DIR$/.gitignore" />
       </list>
     </option>
   </component>
@@ -280,6 +259,20 @@
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="group" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="Escheresque" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="Escheresque" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="data" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -584,16 +577,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/escheresque/stl.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="163">
-          <caret line="5" column="0" selection-start-line="5" selection-start-column="0" selection-end-line="5" selection-end-column="0" />
-          <folding>
-            <element signature="e#52#70#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/escheresque/reaction_diffusion.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
@@ -687,14 +670,6 @@
           <folding>
             <marker date="1460225833000" expanded="true" signature="4495:4582" placeholder="..." />
           </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/environment.yml">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="495">
-          <caret line="15" column="2" selection-start-line="15" selection-start-column="2" selection-end-line="15" selection-end-column="2" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -844,21 +819,53 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/escheresque/interface/poisson_editor.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="413">
-          <caret line="589" column="48" selection-start-line="589" selection-start-column="48" selection-end-line="589" selection-end-column="48" />
+        <state relative-caret-position="149">
+          <caret line="582" column="23" selection-start-line="582" selection-start-column="23" selection-end-line="582" selection-end-column="23" />
           <folding>
             <element signature="e#408#436#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/environment.yml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="495">
+          <caret line="15" column="2" selection-start-line="15" selection-start-column="2" selection-end-line="15" selection-end-column="2" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/escheresque/stl.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="347">
+          <caret line="23" column="0" selection-start-line="23" selection-start-column="0" selection-end-line="23" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/Miniconda2/envs/escheresque/Lib/site-packages/numpy/linalg/linalg.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="578">
+          <caret line="1587" column="36" selection-start-line="1587" selection-start-column="36" selection-end-line="1587" selection-end-column="36" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/escheresque/computational_geometry.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="262">
-          <caret line="382" column="9" selection-start-line="382" selection-start-column="9" selection-end-line="382" selection-end-column="9" />
+        <state relative-caret-position="526">
+          <caret line="55" column="43" selection-start-line="55" selection-start-column="43" selection-end-line="55" selection-end-column="43" />
           <folding>
             <element signature="e#1131#1157#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/.gitignore">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="858">
+          <caret line="217" column="5" selection-start-line="217" selection-start-column="5" selection-end-line="217" selection-end-column="5" />
+          <folding />
         </state>
       </provider>
     </entry>

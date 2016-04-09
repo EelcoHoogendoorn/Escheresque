@@ -45,23 +45,6 @@ def squeeze_geometry(points, idx):
     return points[active_points], inv.reshape(idx.shape)
 
 
-
-
-
-class TransposedLoopup(object):
-    """
-    given a datastructure allowing fast boundary lookup, precompute fast incidence lookup information
-    """
-    def __init__(self, boundary, elements):
-        si = np.argsort(boundary.flatten())
-        self.pivots = np.searchsorted(boundary.flatten()[si], np.arange(elements+1))
-        self.si = (np.arange(boundary.size) // boundary.shape[1])[si]
-    def __getitem__(self, ind):
-        """return an array of incident primitives; edges, given vertex"""
-        return self.si[self.pivots[ind]:self.pivots[ind+1]]
-
-
-
 def trim_curve(points, curve, curve_idx, radius):
     """
     remove points too close to the cut curve. they dont add anything, and only lead to awkward triangles
@@ -101,15 +84,22 @@ def intersect_curve(curve_p, curve_idx):
     but this is unlikely to have any practical utility, and more likely to be annoying
     """
     tree   = KDTree(curve_p)
+    # curve points per edge, [n, 2, 3]
     cp     = util.gather(curve_idx, curve_p)
+    # normal rotating end unto start
     normal = util.normalize(np.cross(cp[:,0], cp[:,1]))
+    # midpoints of edges; [n, 3]
     mid    = util.normalize(cp.sum(axis=1))
+    # vector from end to start, [n, 3]
     diff   = np.diff(cp, axis=1)[:,0,:]
-    radius = np.sqrt(util.dot(diff, diff)) / 2 * 1.01
+    # radius of sphere needed to contain edge, [n]
+    radius = np.linalg.norm(diff, axis=1) / 2 * 1.01
 
-    projector = [np.linalg.pinv(q.T) for q in cp]
+    # FIXME: this can be vectorized by adapting pinv
+    projector = [np.linalg.pinv(q) for q in np.swapaxes(cp, 1, 2)]
 
-    incident = TransposedLoopup(curve_idx, len(curve_p))      #each vertex may have an aribtrary number of edges
+    # incident[vertex_index] gives a list of all indicent edge indices
+    incident = npi.group_by(curve_idx.flatten(), np.arange(curve_idx.size))
 
     def intersect(i,j):
         """test if spherical line segments intersect. bretty elegant"""
@@ -141,7 +131,7 @@ def refine_curve(points, curve_p, curve_idx):
     normal = util.normalize(np.cross(cp[:,0], cp[:,1]))
     mid    = util.normalize(cp.sum(axis=1))
     diff   = np.diff(cp, axis=1)[:,0,:]
-    radius = np.sqrt(util.dot(diff, diff)) / 2
+    radius = np.linalg.norm(axis=1) / 2
 
     def insertion_point(e, c):
         """calculate insertion point"""
@@ -185,7 +175,7 @@ def triangulate(points, curve, curve_idx):
     #trim the pointset, to eliminate points co-linear with the cutting curve
     print 'trimming dataset'
     diff   = np.diff(curve[curve_idx], axis=1)[:,0,:]
-    length = np.sqrt(util.dot(diff, diff))
+    length = np.linalg.norm(diff, axis=1)
     points = trim_curve(points, curve, curve_idx, length.mean()/4)
 
     #refine curve iteratively. new points may both obsolete or require novel insertions themselves
@@ -229,8 +219,6 @@ def triangulate(points, curve, curve_idx):
     return allpoints, triangles, curve, curve_idx
 
 
-
-
 def triangle_edges(triangles):
     """construct 3 edges for each triangle"""
     edges = np.empty((len(triangles), 3, 2), np.int32)
@@ -238,15 +226,11 @@ def triangle_edges(triangles):
         edges[:,i,0] = triangles[:,i-2]
         edges[:,i,1] = triangles[:,i-1]
     return edges.reshape(-1,2)
+
+
 def order_edges(edges):
     """place edges in standarized order. is this actually faster than sorting over last axis?"""
     return np.where((edges[:,0]<edges[:,1])[:,None], edges[:,::+1], edges[:,::-1])
-##def label_edges(idx):
-##    """convert Nx2 edge index array to N unique labels. could reaplce with voidview if searchosrted works on it"""
-##    return idx.astype(np.int32).ravel().view(np.int64).reshape(idx.shape[:-1])
-# def label_edges(edges):
-#     """return unique bytecode for each edge, independent of vertex ordering"""
-#     return voidview(order_edges(edges))
 
 
 def partition(points, triangles, curve):
@@ -328,11 +312,6 @@ def partition(points, triangles, curve):
 
     return sorted(partitions, key=lambda p:len(p[0]))
 
-def multiplicity(keys):
-    unique, inverse = np.unique(keys, return_inverse=True)
-    count = np.zeros(len(unique),np.int)
-    np.add.at(count, inverse, 1)
-    return count[inverse]
 
 def extrude(points, triangles, outer, inner):
     """
@@ -342,19 +321,10 @@ def extrude(points, triangles, outer, inner):
     we can also do swepth sphere extrude; better for casting
     """
     #construct edge information
-    tri_edges_all = triangle_edges(triangles)       #nx2 pairs of indices
-    # tri_edges_id  = label_edges(tri_edges_all)
+    tri_edges = order_edges(triangle_edges(triangles))       #nx2 pairs of indices
 
-    #count the number of times each edge occurs. cant we use searchsorted here? surely this isnt most elegant way?
-    #use group.multiplicity here
-##    edges, inverse  = np.unique(tri_edges_id, return_inverse = True)
-##    _, idx          = np.unique(np.sort(inverse), return_index=True)
-##    incidence_count = np.diff(np.append(idx,len(inverse)))[inverse]
-##
-##    #find boundary indices, in original oriented ordering
-##    boundary = incidence_count == 1
-    boundary = npi.multiplicity(tri_edges_all) == 1
-    eb = tri_edges_all[boundary]
+    boundary = npi.multiplicity(tri_edges) == 1
+    eb = tri_edges[boundary]
     if len(eb) == 0: raise Exception('Surface to be extruded is closed, thus does not have a boundary')
 
     #construct closed solid
@@ -380,10 +350,10 @@ def extrude(outer, inner, triangles):
     points = len(outer)
 
     #construct edge information
-    tri_edges_all = triangle_edges(triangles)       #nx2 pairs of indices
+    tri_edges = triangle_edges(triangles)       #nx2 pairs of indices
 
-    boundary = npi.multiplicity(tri_edges_all) == 1
-    eb = tri_edges_all[boundary]
+    boundary = npi.multiplicity(tri_edges) == 1
+    eb = tri_edges[boundary]
     if len(eb) == 0: raise Exception('Surface to be extruded is closed, thus does not have a boundary')
 
     #construct closed solid
