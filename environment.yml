@@ -9,11 +9,11 @@ dependencies:
   - scipy
   - numba
   - matplotlib
-  - vtk =5*
-  - traitsui
-  - mayavi
-  - pyface
+  - vtk
   - qt
+  - mayavi
+  - traitsui
+  - pyface
   # dev
   - pyyaml =3.11*
   - invoke >=0.11.1,<0.12
