@@ -1,7 +1,8 @@
 
-from .interface import *
+from escheresque.interface.interface import *
 
-
+from escheresque.datamodel import DataModel, Constraints
+from escheresque import util
 
 
 class EdgeHandler(Handler):
@@ -254,13 +255,6 @@ class Domain(object):
 
 
 
-
-
-
-
-
-
-
 class EdgeEditor(HasTraits):
     """
     editor for boundary curves and vertex location
@@ -395,7 +389,6 @@ class EdgeEditor(HasTraits):
             self._save_as_fired()
 
     def _save_as_fired(self):
-        from enthought.pyface.api import FileDialog, OK, confirm, YES
         file_wildcard = '*.sch'
         dialog = FileDialog(action="save as", wildcard=file_wildcard, default_directory = self.filedir)
         dialog.open()
@@ -413,7 +406,6 @@ class EdgeEditor(HasTraits):
                 print 'error saving file'
 
     def _load_fired(self):
-        from enthought.pyface.api import FileDialog, OK, confirm, YES
         file_wildcard = '*.sch'
         dialog = FileDialog(action="open", wildcard=file_wildcard, default_directory = self.filedir)
         dialog.open()
@@ -449,7 +441,7 @@ class EdgeEditor(HasTraits):
         if True:
             from mayavi import mlab
             import stl
-            import computational_geometry
+            from escheresque import computational_geometry
 
             if False:
                 x,y,z = curve_p.T
@@ -863,66 +855,66 @@ class EdgeEditor(HasTraits):
 
 
     view = View(
-        HSplit(
+                HSplit(
                     Group(
                         Item('scene', editor=SceneEditor(scene_class=MayaviScene),
                              height=1000, width=1000, show_label=False)),
                     Group(
-                    Group(
                         Group(
-                            Item('group_visible',  label='Group'),
-                            show_border = True,
-                            label = 'Visibility'
-                        ),
-                        Group(
-                            Item('add_point_toggle', label='Add Point'),
-                            Item('add_edge_toggle', label='Add Edge'),
-                        ),
+                            Group(
+                                Item('group_visible',  label='Group'),
+                                show_border = True,
+                                label = 'Visibility'
+                            ),
+                            Group(
+                                Item('add_point_toggle', label='Add Point'),
+                                Item('add_edge_toggle', label='Add Edge'),
+                            ),
 
-                        Group(
-                            Item('delete_point', label='Delete'),
-                            Item(name='constraints', label='Constraint',
-                                                  editor=EnumEditor(values={c: '{i}:{n}'.format(i=i,n=str(c)) for i,c in enumerate(Constraints)})),
-                            enabled_when = 'selected_point != None',
-                            label = 'Point',
-                            show_border = True,
-                            show_labels = True,
-                        ),
+                            Group(
+                                Item('delete_point', label='Delete'),
+                                Item(name='constraints', label='Constraint',
+                                                      editor=EnumEditor(values={c: '{i}:{n}'.format(i=i,n=str(c)) for i,c in enumerate(Constraints)})),
+                                enabled_when = 'selected_point != None',
+                                label = 'Point',
+                                show_border = True,
+                                show_labels = True,
+                            ),
 
-                        Group(
-                            Item('delete_edge', label=''),
-                            Item('color_edge', style='custom', label='Color'),
-                            Item('add_cp_toggle', label='Add Control Point'),
-                            Item('boundary_edge', label='Use as tile boundary'),
-                            enabled_when = 'selected_edge != None',
-                            label = 'Edge',
-                            show_border = True,
-                            show_labels = True,
-                        ),
+                            Group(
+                                Item('delete_edge', label=''),
+                                Item('color_edge', style='custom', label='Color'),
+                                Item('add_cp_toggle', label='Add Control Point'),
+                                Item('boundary_edge', label='Use as tile boundary'),
+                                enabled_when = 'selected_edge != None',
+                                label = 'Edge',
+                                show_border = True,
+                                show_labels = True,
+                            ),
 
-                        Group(
-                            Item('tension_slider', label='Tension'),
-                            Item('delete_cp', label='Delete'),
-                            enabled_when = 'selected_cp != None',
-                            label = 'Control Point',
-                            show_border = True,
-                            show_labels = False,
-                        ),
-                        HGroup(
-                            Item('new'),
-                            Item('save'),
-                            Item('save_as'),
-                            Item('load'),
-                            Item('edit_relief'),
-                            Item('export'),
-                            show_border = True,
-                            show_labels = False,
+                            Group(
+                                Item('tension_slider', label='Tension'),
+                                Item('delete_cp', label='Delete'),
+                                enabled_when = 'selected_cp != None',
+                                label = 'Control Point',
+                                show_border = True,
+                                show_labels = False,
+                            ),
+                            HGroup(
+                                Item('new'),
+                                Item('save'),
+                                Item('save_as'),
+                                Item('load'),
+                                Item('edit_relief'),
+                                Item('export'),
+                                show_border = True,
+                                show_labels = False,
 
+                            ),
                         ),
-                    ),
-                    Group(
-                    ),
-                    layout='tabbed',
+                        # Group(
+                        # ),
+                        # layout='tabbed',
                     )
                 ),
             resizable=True,

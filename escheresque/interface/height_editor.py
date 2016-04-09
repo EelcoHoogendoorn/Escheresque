@@ -17,18 +17,14 @@ then activate a set of controls to manipulate
 camera has orientation_wxyz prop; if that is not a quat, what is?
 """
 
-import numpy as np
+from escheresque.interface.selectgroup import SelectGroup
+from escheresque.interface.interface import *
+from escheresque.datamodel import DataModel
+from escheresque import util
+from escheresque.quaternion import Quaternion
 
-from .interface import *
-from ..datamodel import DataModel
-from .. import util
-from ..quaternion import Quaternion
-
-
-
-
-
-
+from escheresque import multicomplex
+from escheresque import reaction_diffusion
 
 
 class EdgeHandler(Handler):
@@ -308,28 +304,19 @@ class HeightEditor(HasTraits):
         self.datamodel = datamodel
         self.group = datamodel.group
 
-
-        from .. import multicomplex
         self.hierarchy = multicomplex.generate(self.group, 3)
         self.complex = self.hierarchy[-1]
 
-
         self.orientation = Quaternion(0,0,0,1)
 
-
-        from .. import reaction_diffusion
         self.reaction_type = reaction_diffusion.ReactionDiffusion.params.keys()
         self.reaction_selected = self.reaction_type[0]
-
-
-
 
 
     filedir  = Str('')
     filename = Str('')
     def _new_fired(self):
         #pop up file dialog
-        from .selectgroup import SelectGroup
         sg = SelectGroup()
         sg.configure_traits(kind='livemodal')
         if sg.selected_group:
@@ -383,7 +370,6 @@ class HeightEditor(HasTraits):
         except:
             self._save_as_fired()
     def _save_as_fired(self):
-        from enthought.pyface.api import FileDialog, OK, confirm, YES
         file_wildcard = '*.*'
         dialog = FileDialog(action="save as", wildcard=file_wildcard, default_directory = self.filedir)
         dialog.open()
@@ -397,7 +383,6 @@ class HeightEditor(HasTraits):
                 traceback.print_exc()
                 print 'error saving file'
     def _load_fired(self):
-        from enthought.pyface.api import FileDialog, OK, confirm, YES
         file_wildcard = '*.*'
         dialog = FileDialog(action="open", wildcard=file_wildcard, default_directory = self.filedir)
         dialog.open()

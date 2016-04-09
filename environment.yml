@@ -1,0 +1,21 @@
+name: escheresque
+channels:
+  - anaconda
+  - eelcohoogendoorn
+dependencies:
+  - python =2.7*
+  - numpy
+  - numpy-indexed
+  - scipy
+  - numba
+  - matplotlib
+  - vtk =5*
+  - traitsui
+  - mayavi
+  - pyface
+  - qt
+  # dev
+  - pyyaml =3.11*
+  - invoke >=0.11.1,<0.12
+  # tests
+  - pytest >=2.8.4,<2.9

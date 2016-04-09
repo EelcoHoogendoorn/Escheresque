@@ -10,7 +10,7 @@ hierachy should be added on externaly
 """
 
 import numpy as np
-from . import util
+from escheresque import util
 
 
 

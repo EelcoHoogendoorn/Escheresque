@@ -3,12 +3,9 @@ stl handling module
 
 and stl load module?
 """
-
-
 import numpy as np
-from itertools import izip
 
-from . import util
+from escheresque import util
 
 
 def save_STL(filename, P):

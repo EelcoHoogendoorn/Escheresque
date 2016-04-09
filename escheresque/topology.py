@@ -12,11 +12,10 @@ edges are always opposite of vertices of a triangle, and thus both ordered
 
 import numpy as np
 
-from . import util
-
-
+from escheresque import util
 
 from scipy.sparse import csr_matrix
+
 def sparse_matrix_from_array(index, weight=None):
     if weight is None:
         weight = np.ones_like(index)
@@ -42,15 +41,13 @@ def sparse_matrix_from_array(index, weight=None):
 
 
 class Topology(object):
-    """
-    topology describing a single triangular fundamental domain
+    """topology describing a single triangular fundamental domain
     it follows a hierarchical subdivision strategy; each triangle maps exactly to 4 subdivided triangles
     this is useful both for multigrid as well as collision detection
 
     need to add transfer operators between different levels of subdivision, for MG applications
 
     ordering information is kept metriculously
-
     """
 
     def __init__(self, position, FE, EV, FV):

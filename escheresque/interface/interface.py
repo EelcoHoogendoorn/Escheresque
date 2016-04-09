@@ -9,38 +9,32 @@ MAYAVI_THREADING = True
 
 import numpy as np
 
-from .. import util
-from ..datamodel import DataModel, Constraints
-
-
-
 from traits.api import HasTraits, Instance, Button, \
     on_trait_change, Range, Bool, Enum, List, Any, Int, Color, Str, Float
 from traitsui.api import View, Item, HSplit, Group, EnumEditor, Handler, HGroup
-
+from traitsui.api import EnumEditor, VGroup, VSplit, Label, spring
 
 
 from mayavi import mlab
 from mayavi.core import lut_manager
 from mayavi.core.ui.api import MlabSceneModel, SceneEditor
 from mayavi.core.ui.mayavi_scene import MayaviScene
-##from mayavi.filters import delauney2d, triangle
-##from mayavi.api.tools import
-##triangle
-##delauney2d()
+from threading import Thread
+from collections import defaultdict
+
+from pyface.api import FileDialog, OK, confirm, YES, GUI
+
+from tvtk.api import tvtk
+
+from traits.api import push_exception_handler
 
 
-from enthought.pyface.api import FileDialog, OK, confirm, YES, GUI
 
-from enthought.tvtk.api import tvtk
-##from tvtk.api import tvtk
-
-
-from enthought.traits.api import push_exception_handler
 push_exception_handler( handler = lambda o,t,ov,nv: None,
                         reraise_exceptions = True,
                         main = True,
                         locked = True )
+
 
 
 class MouseHandler(object):
@@ -80,7 +74,6 @@ class RenderLock(object):
 
 
 
-from threading import Thread
 
 class ThreadedAction(Thread):
     """
@@ -114,7 +107,6 @@ class ThreadedAction(Thread):
 not sure what is wrong here; lack of threadsafety might be the issue
 """
 
-from collections import defaultdict
 
 scale_flag = defaultdict(lambda: False)
 def lock_scale(obj, name, old, new):

@@ -4,58 +4,33 @@
 dialog for selecting a symmetry group
 """
 
+from collections import OrderedDict
+
+from inspect import getmembers, isclass, getdoc
+
+from escheresque.interface.interface import *
+import escheresque.group
 
 
-##def build_mapping():
-##    """build mapping from polytopes to subgroups"""
-##    from collections import OrderedDict
-##    import importlib
-##    from ..group.group import Group
-##    from inspect import getmembers, isclass
-##    #modules to be loaded
-##    geometries = ['dihedral', 'tetrahedral', 'octahedral', 'icosahedral']
-##
-##
-##    def getgroups(mod):
-##        """load all group subclasses from a module"""
-##        lib = importlib.import_module('.group.'+mod, 'escheresque')
-##        od = {k:g for k,g in getmembers(lib) if isclass(g) and issubclass(g, Group) and not g is Group}
-##        return OrderedDict(sorted(od.items(), key=lambda item: item[1].__name__))
-##    ##    return [getmembers(lib, lambda g: isclass(g) and issubclass(g, Group) and not g is Group)]
-##
-##    return OrderedDict([(mod.capitalize(), getgroups(mod)) for mod in geometries])
-
-from ..group.group import Group
-from ..group import dihedral, tetrahedral, octahedral, icosahedral
 def build_mapping():
     """build mapping from polytopes to subgroups"""
-    from collections import OrderedDict
-
-    from inspect import getmembers, isclass
     #modules to be loaded
-
-    geometries = ['dihedral', 'tetrahedral', 'octahedral', 'icosahedral']
-    modules = OrderedDict( [(k,v) for k,v in globals().iteritems() if k in geometries])
-
-    def getgroups(mod):
-        """load all group subclasses from a module"""
-        od = {k:g for k,g in getmembers(mod) if isclass(g) and issubclass(g, Group) and not g is Group}
-        return OrderedDict(sorted(od.items(), key=lambda item: item[1].__name__))
-
-    return OrderedDict([(name.capitalize(), getgroups(mod)) for name,mod in modules.iteritems()])
+    return OrderedDict()
+    # geometries = ['dihedral', 'tetrahedral', 'octahedral', 'icosahedral']
+    # modules = OrderedDict( [(k,escheresque.group.getattr(k)) for k in geometries])
+    #
+    # def getgroups(mod):
+    #     """load all group subclasses from a module"""
+    #     od = {k:g for k,g in getmembers(mod) if isclass(g) and issubclass(g, escheresque.group.group.Group) and not g is Group}
+    #     return OrderedDict(sorted(od.items(), key=lambda item: item[1].__name__))
+    #
+    # return OrderedDict([(name.capitalize(), getgroups(mod)) for name,mod in modules.iteritems()])
 
 
 group_dict = build_mapping()
 
 
 
-
-
-
-
-
-from enthought.traits.api import List, HasTraits, Str, Instance, Button, Range, Int, Bool
-from enthought.traits.ui.api import EnumEditor, Group, VGroup, View, Item, HSplit, VSplit, Label, spring, Handler
 
 
 class SelectHandler(Handler):
@@ -65,12 +40,6 @@ class SelectHandler(Handler):
         if not isok:
             info.object.second = ''     #reset selection
         return True
-
-
-
-
-
-
 
 
 class SelectGroup(HasTraits):
@@ -99,17 +68,11 @@ class SelectGroup(HasTraits):
                 Group(
                     Label('Polyhedron'),
                     Item(name='first', show_label=False, height=0.5, style='custom', editor=EnumEditor(name='first_enum', mode='list')),
-
-##                    Item('N', visible_when="first=='Dihedral'"),
-
-
                     label       = 'Polyhedron',
                     show_border = True,
                     show_labels = True,
 ##                    dock        = 'tab',
 ##                    scrollable  = True,
-
-
                 ),
                 Group(
                     Label('SubGroup'),
@@ -159,7 +122,6 @@ class SelectGroup(HasTraits):
         self.second_enum = group_dict[self.first].keys()
 
     def _second_changed(self, new):
-        from inspect import getdoc
         sg = self.selected_group
         self.description    = getdoc( sg)
         self.order          = str(sg.order)

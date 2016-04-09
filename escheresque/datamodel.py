@@ -15,9 +15,9 @@ generalize to editing on a composition of layers?
 
 import numpy as np
 
-from .subdivision import Curve
-from .util import normalize
-from . import multicomplex
+from escheresque.subdivision import Curve
+from escheresque.util import normalize
+from escheresque import multicomplex
 
 
 class DataModel(object):
@@ -88,11 +88,11 @@ class DataModel(object):
         take standard boundary prop for now
         """
         level = 7
-        from . import multicomplex
+        from escheresque import multicomplex
         hierarchy = multicomplex.generate(self.group, level)
         complex = hierarchy[-1]
 
-        from . import computational_geometry
+        from escheresque import computational_geometry
 
         #concat all curves
         curve_p   = [transform for e in self.edges if e.boundary for mirrors in e.instantiate() for transform in mirrors]

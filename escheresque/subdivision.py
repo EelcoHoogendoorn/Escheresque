@@ -6,7 +6,7 @@ subdivision curve module
 
 import numpy as np
 
-from .util import normalize
+from escheresque.util import normalize
 
 
 class Curve(object):

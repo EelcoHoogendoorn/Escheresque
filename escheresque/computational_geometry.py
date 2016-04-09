@@ -17,11 +17,6 @@ the convex hull of a set of spherical points is also a delauney triangulation.
 and with a little cleverness, even the constrained triangulation we are after.
 constrained triangulation is a messy problem, and on the sphere ne might think itd soon be nightmarish,
 but by exploiting this duality we can kill two t-rexes with one pebble.
-
-
-
-
-
 """
 
 import numpy as np
@@ -29,7 +24,7 @@ from itertools import izip
 from scipy.spatial import cKDTree as KDTree
 import matplotlib.pyplot as pp
 
-from . import util
+from escheresque import util
 
 
 
@@ -184,7 +179,6 @@ def refine_curve(points, curve_p, curve_idx):
             _curve_idx.append(cidx)             #if edge is not split, just copy it
 
     return np.array(_curve_p), np.array(_curve_idx)
-
 
 
 def triangulate(points, curve, curve_idx):

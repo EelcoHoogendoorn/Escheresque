@@ -18,9 +18,10 @@ cost of doing one triangle-test is similar to doing one level of depth iteration
 distance based dragging, temporal based dragging, and picking+moving towards target
 """
 
-
 import numpy as np
-from . import util
+
+from escheresque import util
+
 
 def pick(hierarchy, points):
     """
@@ -102,8 +103,8 @@ def floodfill(hierarchy, seed):
 
 
 if __name__=='__main__':
-    from tetrahedral import ChiralTetrahedral as Group
-    import multicomplex
+    from escheresque.group.tetrahedral import ChiralTetrahedral as Group
+    from escheresque import multicomplex
     complex = multicomplex.generate(Group(), 4)
 
     p = np.random.randn(10,3)

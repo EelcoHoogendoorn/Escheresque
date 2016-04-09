@@ -40,11 +40,7 @@ if backend == 'qt4':
     os.environ['ETS_TOOLKIT'] = 'qt4'
 
 
-import numpy as np
-
-from .datamodel import DataModel
-
-
+from escheresque.datamodel import DataModel
 
 
 def run():
@@ -53,11 +49,11 @@ def run():
     to avoid import deadlock issues
     """
     if True:
-        from .group.tetrahedral import ChiralTetrahedral as Group
+        from escheresque.group.tetrahedral import ChiralTetrahedral as Group
         ##        from tetrahedral import Null as Group
         ##        from octahedral import Tetrahedral as Group
         ##        from octahedral import Null as Group
-        from .group.octahedral import Pyritohedral as Group
+        from escheresque.group.octahedral import Pyritohedral as Group
         ##        from octahedral import ChiralOctahedral as Group
         ##        from octahedral import Tetrahedral as Group
         ##        from octahedral import Origin as Group
@@ -72,12 +68,14 @@ def run():
         ##        dm = DataModel.load(r'C:\Users\Eelco\Dropbox\Escheresque\code\v2\fishes.sch')
 
 
-    if False:
-        from .interface.edge_editor import EdgeEditor
+    if True:
+        from escheresque.interface.edge_editor import EdgeEditor
         editor = EdgeEditor(dm)
     else:
-        from .interface.height_editor import HeightEditor
+        from escheresque.interface.height_editor import HeightEditor
         editor = HeightEditor(dm)
     editor.configure_traits()
 
 
+if __name__ == '__main__':
+    run()
