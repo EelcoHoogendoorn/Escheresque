@@ -11,20 +11,23 @@ from inspect import getmembers, isclass, getdoc
 from escheresque.interface.interface import *
 import escheresque.group
 
-
 def build_mapping():
     """build mapping from polytopes to subgroups"""
+    from escheresque.group.group import Group
+    from escheresque.group import dihedral, tetrahedral, octahedral, icosahedral
+
+    from inspect import getmembers, isclass
     #modules to be loaded
-    return OrderedDict()
-    # geometries = ['dihedral', 'tetrahedral', 'octahedral', 'icosahedral']
-    # modules = OrderedDict( [(k,escheresque.group.getattr(k)) for k in geometries])
-    #
-    # def getgroups(mod):
-    #     """load all group subclasses from a module"""
-    #     od = {k:g for k,g in getmembers(mod) if isclass(g) and issubclass(g, escheresque.group.group.Group) and not g is Group}
-    #     return OrderedDict(sorted(od.items(), key=lambda item: item[1].__name__))
-    #
-    # return OrderedDict([(name.capitalize(), getgroups(mod)) for name,mod in modules.iteritems()])
+
+    geometries = ['dihedral', 'tetrahedral', 'octahedral', 'icosahedral']
+    modules = OrderedDict( [(k,v) for k,v in locals().iteritems() if k in geometries])
+
+    def getgroups(mod):
+        """load all group subclasses from a module"""
+        od = {k:g for k,g in getmembers(mod) if isclass(g) and issubclass(g, Group) and not g is Group}
+        return OrderedDict(sorted(od.items(), key=lambda item: item[1].__name__))
+
+    return OrderedDict([(name.capitalize(), getgroups(mod)) for name,mod in modules.iteritems()])
 
 
 group_dict = build_mapping()

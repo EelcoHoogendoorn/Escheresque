@@ -440,7 +440,7 @@ class EdgeEditor(HasTraits):
 
         if True:
             from mayavi import mlab
-            import stl
+            from escheresque import stl
             from escheresque import computational_geometry
 
             if False:

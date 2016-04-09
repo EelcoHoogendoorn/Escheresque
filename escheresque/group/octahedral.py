@@ -1,5 +1,3 @@
-
-
 """
 octahedral groups
 """
@@ -7,7 +5,7 @@ octahedral groups
 import numpy as np
 import itertools
 
-from .group import *
+from escheresque.group.group import *
 
 
 class Octahedral(Group):

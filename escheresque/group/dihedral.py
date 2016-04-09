@@ -18,7 +18,7 @@ for now, just include a few examples; nothing exhaustive
 import numpy as np
 import itertools
 
-from .group import *
+from escheresque.group.group import *
 
 
 class Dihedral(Group):
@@ -90,6 +90,7 @@ class Origin(Dihedral):
     mirrors = '2'
 
     def fundamental_domain(self):
+        assert self.N % 2 == 0
         return self.origin()
 
 class Null(Dihedral):

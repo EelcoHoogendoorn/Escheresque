@@ -1,64 +1,242 @@
 """
 painting brush module
+rename: the essence of this module is in mapping between intrinsic mesh space and embedding R3 space
+painting is just one application thereof
 
-tools to rasterize a subdivision curve, and so forth.
-
-how to rasterize?
-collision with bary triangle is nontrivial
-finding index and bary for each point is easy
-but how to do lookup in bary space?
-precmpute lookup for multicomplex?
-could simply use 3d lookup structure. would affect distributabiliy however. dont want boost install
-
-can we make simplest python equivalent of collision code?
-cost of doing one triangle-test is similar to doing one level of depth iteration though
-
-
-
-distance based dragging, temporal based dragging, and picking+moving towards target
 """
 
+
 import numpy as np
+from . import util
+import itertools
 
-from escheresque import util
 
-
-def pick(hierarchy, points):
-    """
-    pick a set of worldcoords on the sphere
-    hierarchical structure of the triangles allows finding intersection triangle quickly
-    this should be a method of complex hierarchy no?
-    """
-    points = util.normalize(points)
-
-    complex = hierarchy[-1]
-    group = complex.group
-
-    domains, baries = group.find_support(points)
-
-    local = np.dot(group.basis[0,0,0],baries.T).T
-
-    #next, we need to find the triangle index for each point
-    #we can use a simple tree method. simplicity hinges on same argument as multigrid, of recursive divisibility
-    faces = np.zeros(len(points), np.int)
-    for complex in hierarchy[1:]:   #skip non-subdivided level
-        planes = complex.geometry.planes[faces]
-        signs = np.einsum('ijk,ik->ij', planes, local) > 0  #where are we, with respect to the three planes defining the 4 triangles?
-        #argmax is numerically stable; even in case of multiple true values, we get a valid result
+def pick_primal_triangles(hierarchy, points):
+    faces = np.zeros(len(points), np.int)           #all points start their search at the root triangle
+    for complex in hierarchy[1:]:                   #recurse, skipping root level
+        planes = complex.geometry.planes[faces]     #grab the three precomputed planes subdividing each triangle
+        signs = np.einsum('ijk,ik->ij', planes, points) > 0  #where are we, with respect to the three planes?
+        #only one sign should be positive .argmax is numerically stable; even in case of multiple positive values, we get a valid result
         index = np.argmax(signs, axis=1) + 1        #corner tri index is argmax plus one, since middle triangle is zero
-        index *= signs.sum(axis=1) > 0              #if we are infact in the middle of all planes; overwrite with zero
-        faces = faces * 4 + index                   #convert local triangle index to global index
-
-    #calc baries; simple linear bary computation is good enough for these purposes, no?
-    baries = np.einsum('ijk,ik->ij', complex.geometry.inverted_triangle[faces], local)
-    baries /= baries.sum(axis=1)[:, None]
-    vertices = complex.topology.FV[faces]       #this is slightly redundant...
-    return domains, faces, vertices, baries
+        index *= signs.any(axis=1)                  #if we are infact in the middle of all planes; overwrite with zero
+        faces = faces * 4 + index                   #convert local triangle index to global index according to recursive convention
+    return faces
 
 
-def paint(hierarchy, trace):
-    #convert picked points to well sampled trace
-    edges = zip(trace[1:], trace[:-1])
+class Mapping(object):
+    """
+    object that maps between a set of points in R3
+    and an intrinsic representation on a meshed sphere
+    """
+
+    def __init__(self, hierarchy, points):
+        """
+        pick a set of worldcoords on the sphere
+        hierarchical structure of the triangles allows finding intersection triangle quickly
+        """
+        self.hierarchy = hierarchy
+        self.points = util.normalize(np.atleast_2d(points))
+
+        complex = hierarchy[-1]
+        group = complex.group
+
+        domains, baries = group.find_support(self.points)    #find out which fundamental domain tile each point is in
+        local = np.dot(group.basis[0,0,0],baries.T).T   #map all points to the root domain for computations; all domains have identical tesselation anyway
+
+
+        faces = pick_primal_triangles(hierarchy, local)
+##        #next, we need to find the mesh triangle index for each point
+##        #we can use a simple tree method. simplicity hinges on same argument as multigrid, of exact recursive divisibility of the mesh
+##        faces = np.zeros(len(self.points), np.int)           #all points start their search at the root triangle
+##        for complex in hierarchy[1:]:                   #recurse, skipping root level
+##            planes = complex.geometry.planes[faces]     #grab the three precomputed planes subdividing each triangle
+##            signs = np.einsum('ijk,ik->ij', planes, local) > 0  #where are we, with respect to the three planes?
+##            #only one sign should be positive .argmax is numerically stable; even in case of multiple positive values, we get a valid result
+##            index = np.argmax(signs, axis=1) + 1        #corner tri index is argmax plus one, since middle triangle is zero
+##            index *= signs.any(axis=1)                  #if we are infact in the middle of all planes; overwrite with zero
+##            faces = faces * 4 + index                   #convert local triangle index to global index according to recursive convention
+
+        #calc baries; simple linear bary computation is good enough for these purposes, no?
+        baries = np.einsum('ijk,ik->ij', complex.geometry.inverted_triangle[faces], local)
+        self.baries = baries / baries.sum(axis=1)[:, None]
+
+        self.raveled_indices = np.ravel_multi_index(
+            (complex.topology.FV[faces].ravel(), np.repeat(domains[0],3)),
+            complex.shape)
+        self.complex = complex
+
+    def sample(self, field):
+        """map p0 form on sphere to curve"""
+        return (field.ravel()[self.raveled_indices].reshape(self.baries.shape) * self.baries).sum(axis=1)
+
+    def inject(self, weights):
+        """map weights on curve to d2 form on sphere"""
+        from . import multigrid
+        brush = np.zeros(self.complex.shape, np.float)   #brush is d2; it s a conserved quantity
+        util.scatter(
+            self.raveled_indices,
+            self.baries*weights[:,None],
+            brush)
+        return self.complex.boundify(brush)
+
+
+
+
+class Mapping_d2(object):
+    """
+    create a mapping object to resample velocity components for flow simulation
+    init only with datamodel; update with a new set of points, allowing for caching of properties
+
+    these interpolations should happen in a maximally mesh-independent manner
+    as a stress-case, a rectangular grid interpolation should not be biased towards the midline
+    multigrid transfer should provide clues here
+
+    is there anything wrong with advecting scalar vorticity directly via d2 mechanism?
+    may not generalize to 3d, but whatever
+    would need to be able to map velocity to p0 at least
+    average tangential fluxes over boundary of d2?
+    not sure this is possible; one cannot really map the normal to tangent fluxes on the advected mesh
+    one cannot escape interpolating velocity it seems
+    but velocity from d1 adjecnt to d0 produces massive jump on diagonal flip, unless it tapers to zero
+    taperiong to zero hardly makes sense, however
+
+    sum of all tangent fluxes around d2 makes more sense methinks
+    this also needs custom boundification. same as normal really, no?
+
+    d0-method has advantage of locally conserving vorticity by construction
+    do we conserve vorticity? yeah, since it is always zero anyway in a closed domain
+    but are we doing so in any local sense?
+    not materially more or less so, i think
+    he question is, what happens to a remapping of velo field, while keeping sampling points constant
+    d0 vecloity leads to unchanging vorticity under these condition
+    whereas d2 vecloity seems like it would result in diffusion
+    bfecc might counteract that.
+
+    given good integration, jump in velo would be less of an issue. would like to sample integrated quantity,
+    but we cannoot construct a streamfunction
+
+    BFECC should be easy to add as well.
+
+    philosophical conclusion: a single mesh may not have all desired properties
+    that is, we may need to rely on the randomness of the mesh for independence from its particulars,
+    rather than obtaining proper operators for all mesh configurations
+    """
+    def __init__(self, datamodel, points):
+        """
+        precomputations which are identical for all mappings
+        """
+        self.datamodel = datamodel
+        self.hierarchy = self.datamodel.hierarchy
+        self.complex   = self.hierarchy[-1]
+        self.group     = self.complex.group
+
+        #cache the index a point is in. if it remains unchanged, no need to update
+        count = len(points)
+        self.index = np.zeros((3, count), np.int8)
+
+
+        #precompute subtriangles
+        primal = self.complex.geometry.primal[ self.complex.topology.FV]
+        mid    = util.normalize(np.roll(primal, +1, 1) + np.roll(primal, -1, 1))
+        dual   = self.complex.geometry.dual
+
+        basis = np.empty((self.complex.topology.D0, 3, 2, 3, 3))
+        for i in range(3):
+            basis[:,i,0,0,:] = primal[:,i  ,:]
+            basis[:,i,1,0,:] = primal[:,i  ,:]
+            basis[:,i,0,1,:] = mid   [:,i-2,:]
+            basis[:,i,1,1,:] = mid   [:,i-1,:]
+        basis[:,:,:,2,:]     = dual  [:,None, None,:]     #each subtri shares the dual vert
+
+        self.subdomain = util.adjoint(basis)                #precompute all we can for subdomain compu
+        self.subdomain[:,:,1,:,:] *= -1                     #flip sign
+        self.subdomain = self.subdomain.reshape(-1,6,3,3)   #fold sign axis
+
+        self.update(points)
+
+
+
+    def update(self, points):
+        """
+        bind a new set of points
+        presumably, repeatd update calls have coherency that can be exploited
+        """
+
+        #check which points need a domain update
+        baries = np.einsum('pij,pj->pi', self.group.inverse[[i for i in self.index]], points)
+        update = np.any(baries<0, -1)
+        if np.any(update):
+            index, baries[update] = self.group.find_support(points[update])
+            for si, i in itertools.izip( self.index, index):
+                si[update] = i
+
+        #map all points to the root domain for computations; all domains have identical tesselation anyway
+        local = np.dot(self.group.basis[0,0,0],baries.T).T
+
+        #add caching here as well? many d2 points may simply remain within their triangle
+        faces = pick_primal_triangles(self.hierarchy, local)
+        print faces
+
+        #now do fundamental domain picking. need to have edge midpoints, triangle corners, and dual
+        #endresult should be a primal-mid-dual index for each point, for fast indexing
+        #we can calc baries easily; does that help?
+        #not really; need pos relative to dual
+        #could also just preinvert all subtris; only 9x6 flops.
+        #3x6 flops is optimal; but will need baries eventuall anyway
+        #then just need to map back from positive
+        sd = self.subdomain[faces]
+        sub_baries = np.einsum('psbj,pj->psb', sd, local)
+        sub_domain = np.all(sub_baries>=0, -1)
+##        print np.nonzero(sub_domain)
+        linear_index = sub_domain.argmax(axis=1)
+##        dindex = np.unravel_index(linear_index, shape)
+        v_idx = linear_index // 2
+        e_idx = (linear_index - 3) // 2
+
+        print linear_index
+        print v_idx
+        print e_idx
+
+        self.v_idx = self.complex.topology.FV [faces,v_idx]
+        self.e_idx = self.complex.topology.FEi[faces,e_idx]
+        self.f_idx = faces
+        print self.v_idx
+        print self.e_idx
+        print self.f_idx
+
+        self.sub_baries = sub_baries[np.arange(len(linear_index)), linear_index]
+        self.sub_baries /= self.sub_baries.sum(axis=-1)[:, None]
+        print self.sub_baries
+
+
+
+    def sample_d2(self, field):
+        """
+        sample a d2-form
+        """
+
+
+
+    def sample_velocity(self, velocity_p1):
+        """
+        sample a velocity field
+        """
+        #calc velocity representation on relevant subforms (primal-mid-dual vert)
+        velocity_d1 = velocity_p1
+        velocity_d2 = None
+
+        #sum field over the picked baries
+
+
+
+
+
+def generate_trace(trace):
+    """
+    convert picked points to well sampled trace of positions and weights
+    """
+    edges = np.array( zip(trace[1:], trace[:-1]))
+    edges = util.normalize(edges)
     samples = np.linspace(0, 1, 11)
     samples = (samples[1:] + samples[:-1])/2
     weights = []
@@ -69,45 +247,27 @@ def paint(hierarchy, trace):
         positions.extend( l[None, :] * samples[:, None] + r[None, :] * (1-samples[:, None]))
     weights = np.array(weights)
     positions = np.array(positions)#.reshape((-1,3))
+    return positions, weights
 
-    #pick the sampled trace
-    domains, triangles, vertices, baries = pick(hierarchy, positions)
 
-    #scatted picked info to brush
+
+
+def paint(hierarchy, trace, width):
+    """
+    take a point trace, and paint it onto a brush
+    """
     complex = hierarchy[-1]
-    brush = np.zeros(complex.shape, np.float)
-    util.scatter(
-        np.ravel_multi_index((vertices.ravel(),np.repeat(domains[0],3)), complex.shape),   #raveling is key to using efficient scatter here
-        np.ravel(baries*weights[:,None]),
-        np.ravel(brush))
-    brush = complex.P0D2 * complex.boundify(brush)
+    #refine the trace
+    positions, weights = generate_trace(trace)
 
-    #apply diffusion
+    brush = Mapping(hierarchy, positions).inject(weights)
+
     from . import multigrid
-    brush = multigrid.mg_diffuse_fixed(hierarchy, brush)
+    brush = multigrid.diffuse(hierarchy, brush, width**2)
 
-    return brush
-
-
-def floodfill(hierarchy, seed):
-    """
-    can we do multigrid floodfill? only expand into a region if no blocks whatsoever. iterate to convergence on each level, starting at coarsest
-    what if going coarse creates overlap with boundary? those cells need disabling. any overlap with boundary disqualifies
-    coarse contribution is ORed in
-    so we start at fine level, do some iterations to increase odds we hit a free cell at cooarse level,
-    coarsen, and repeat to lowest level
-    at each level we iterate till convergence, and OR into higher level
-    flooding is easier on tris i suppose, since they map in a boolean hierachircla manner
-    """
+    return complex.P0D2 * brush
 
 
 
-if __name__=='__main__':
-    from escheresque.group.tetrahedral import ChiralTetrahedral as Group
-    from escheresque import multicomplex
-    complex = multicomplex.generate(Group(), 4)
 
-    p = np.random.randn(10,3)
-    pick(complex, p)
-    ##pick(complex, np.array([[-3,-2,-1.0],[-1,-2,-3.0]]))
 

@@ -11,12 +11,10 @@ then of course also trivial subgroups of those
 
 """
 
-
-
 import numpy as np
 import itertools
 
-from .group import *
+from escheresque.group.group import *
 
 
 class Icosahedral(Group):
@@ -57,7 +55,7 @@ class ChiralIcosahedral(Icosahedral):
     mirrors = 1
 
     def fundamental_domain(self):
-        return self.orientation_from_basis(self.basis_from_domains(self.domains))
+        return self.chiral()
 
 
 

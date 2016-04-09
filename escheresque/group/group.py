@@ -10,6 +10,10 @@ the symmetries are encoded as relationships between the fundamental domains
 constraints need to be changed. simply enable all 6 constraint types in all groups
 
 add more asserts here; you never know what happens
+
+should allow construction of a group from a set of transforms, no?
+this also facilitates complex subgroup generation; just build transforms in one group,
+than match transforms in another
 """
 
 import numpy as np
@@ -272,7 +276,8 @@ class Group(object):
         dindex = np.unravel_index(linear_index, shape)
         bary = baries[dindex[0],dindex[1],dindex[2],:,np.arange(len(position))]     #fancy indexing indeed...
         bary[bary<0] = 0
-        return np.squeeze(dindex), np.squeeze(bary)
+        return dindex, bary
+##        return np.squeeze(dindex), np.squeeze(bary)
 
 
     def basis_from_domains(self, domains):

@@ -6,64 +6,26 @@ various utility functions
 import numpy as np
 
 
+from scipy.sparse import coo_matrix, csr_matrix, dia_matrix
 
 
 
-##def merge_geometry(points, idx):
-##    """
-##    given iterables of points and idx, return a merged geometry
-##    """
-##    points, idx =  np.vstack(points), np.vstack(idx)
-##    _, idx, inv = np.unique(voidview(points), return_index=True, return_inverse=True)
-##    return points[idx], idx[inv]
-##
-##def split_geometry(points, idx, elements):
-##    """split geometry by element vector"""
-##    _idx = idx[elements]
-##    active_points, q, inv = np.unique(_idx, True, return_inverse=True)
-##    z= inv[_idx]
-##    print z.shape
-##    return points[active_points], z
-
-##def grab(idx, vals):
-##    """
-##    strip one index off of vals
-##    given a nx3 list of indices and an n(x3) list of values, dereference the vals using the indices
-##    is this a gather op? yeah, but a special kind
-##    idx may have shape, and vals too
-##    """
 def grab(idx, vals):
     """return vals[idx]. return.shape = idx.shape + vals.shape[1:]"""
     return vals[idx]
 def gather(idx, vals):
     """return vals[idx]. return.shape = idx.shape + vals.shape[1:]"""
     return vals[idx]
-
-##def scatter(rowidx, vals, target):
-##    """target[rowidx] += vals"""
-##    rowidx = np.ravel(rowidx)
-##    vals   = np.ravel(vals)
-##
-##    cols = len(vals)
-##    rows = len(target)
-##
-##    data = np.ones(cols)
-##    colidx = np.arange(cols)
-##    from scipy.sparse import coo_matrix
-##    M = coo_matrix((data,(rowidx,colidx)), shape=(rows, cols))
-##
-##    target += M*vals
-
 def scatter(idx, vals, target):
     """target[idx] += vals. """
-    np.add.at(target, idx.ravel(), vals.ravel())
+    np.add.at(target.ravel(), idx.ravel(), vals.ravel())
 
 
 def adjoint(A):
-    """compute inverse without division by det; nxv3xc3 input, or list of matrices assumed"""
+    """compute inverse without division by det; ...xv3xc3 input, or array of matrices assumed"""
     AI = np.empty_like(A)
     for i in xrange(3):
-        AI[:,i,:] = np.cross(A[:,i-2,:], A[:,i-1,:])
+        AI[...,i,:] = np.cross(A[...,i-2,:], A[...,i-1,:])
     return AI
 
 def null(A):
@@ -79,11 +41,13 @@ def inverse_transpose(A):
     efficiently compute the inverse-transpose for stack of 3x3 matrices
     """
     I = adjoint(A)
-    return I / dot(I, A).mean(axis=1)[:,None,None]
+    det = dot(I, A).mean(axis=-1)
+    return I / det[...,None,None]
 
 def inverse(A):
     """inverse of a stack of 3x3 matrices"""
-    return np.transpose( inverse_transpose(A), (0,2,1))
+##    return np.transpose( inverse_transpose(A), (0,2,1))
+    return np.swapaxes( inverse_transpose(A), -1,-2)
 
 
 def normals(triangles):
@@ -94,27 +58,14 @@ def normals(triangles):
 def dot(A, B):
     """dot arrays of vecs; contract over last indices"""
     return np.einsum('...i,...i->...', A, B)
-#    return (A*B).sum(axis=-1)  #einsum solution is identical, but should be faster
-#    return np.inner(A, B)      #plain wrong
-#    return np.einsum('ij,ij->i', A, B)     #not identical; not accounting for additional axes
 
 def normalize(listofvec):
     """normalize an array of vecs"""
     norm = np.sqrt(dot(listofvec, listofvec))
     return listofvec / np.expand_dims( norm, -1)
 
-##if True:
-##    q = np.arange(3*3*5)
-##    np.random.shuffle(q)
-##    A = q.reshape(5,3,3)
-##    I = inverse(A)
-##    print np.dot(A[0],I[0])
-##    print np.einsum('aij,ajk->aik', A, I)
-##    quit()
 
 
-
-from scipy.sparse import coo_matrix, csr_matrix, dia_matrix
 def coo_shift(M, r, c):
     """shift a coo matrix by a certain number of rows and colums"""
     return coo_matrix((M.data, (M.row+r, M.col+c)))

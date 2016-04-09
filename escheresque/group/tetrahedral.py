@@ -1,5 +1,3 @@
-
-
 """
 tetradal symmetry group
 
@@ -12,8 +10,7 @@ which is not a desirable generalization
 import numpy as np
 import itertools
 
-
-from .group import *
+from escheresque.group.group import *
 
 
 class Tetrahedral(Group):

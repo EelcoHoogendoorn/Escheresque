@@ -66,14 +66,14 @@ class ThreadedRDAction(Thread):
     or generating new group
     """
     running = True
-    def __init__(self, interface, complex, callback, **kwargs):
+    def __init__(self, interface, datamodel, callback, **kwargs):
         Thread.__init__(self, **kwargs)
         self.interface = interface
-        self.complex = complex
+        self.datamodel = datamodel
         self.callback = callback
 
         from ..reaction_diffusion import ReactionDiffusion
-        self.rd = ReactionDiffusion(complex)
+        self.rd = ReactionDiffusion(datamodel.complex)
         try:
             self.rd.coeff = self.rd.params[self.interface.reaction_selected]
         except:
@@ -87,7 +87,7 @@ class ThreadedRDAction(Thread):
 ##            from scipy.sparse import csr_matrix
 ##            csr_matrix(np.eye(3))
             self.rd.simulate(30)
-            self.complex.heightfield = np.copy(self.rd.state[1].reshape(self.complex.shape))
+            self.datamodel.heightfield = self.rd.state[1].reshape(self.datamodel.complex.shape)
 
             GUI.invoke_later(self.callback)
             step += 1
@@ -111,13 +111,11 @@ class Domain(object):
     needs to be linked to datamodel, no?
 
     yeah; heightfield needs to be in datamodel
-
     """
 
-    def __init__(self, parent, complex):
+    def __init__(self, parent):
         super(Domain, self).__init__()
         self.parent  = parent
-        self.complex = complex
 
     @property
     def scene(self):
@@ -125,6 +123,12 @@ class Domain(object):
     @property
     def group(self):
         return self.parent.group
+    @property
+    def datamodel(self):
+        return self.parent.datamodel
+    @property
+    def complex(self):
+        return self.parent.complex
 
     def draw(self):
         """
@@ -193,7 +197,7 @@ class Domain(object):
         """
         set coords and scalar data of roots
         """
-        hf = self.complex.heightfield
+        hf = self.datamodel.heightfield
         hfl, hfh = hf.min(), hf.max()
         if hfh==hfl:
             hf[:] = 1
@@ -224,6 +228,8 @@ class Domain(object):
                 if self.parent.mapping_height: PP *= radius[:, index][:, None]
                 x,y,z = PP.T
                 source.mlab_source.set(x=x,y=y,z=z)
+
+                #set colors
                 source.data.point_data.scalars = hf[:,index] if self.parent.mapping_color else np.ones_like(hf[:,index])
                 source.data.point_data.scalars.name = 'scalars'
 
@@ -261,16 +267,13 @@ class HeightEditor(HasTraits):
     editor for heightfield
     """
 
-    scene = Instance(MlabSceneModel, args=())
-
+    scene               = Instance(MlabSceneModel, args=())
 
     primal_visible      = Bool('primal')
     mid_visible         = Bool('mid')
     dual_visible        = Bool('dual')
 
-
-    harmonics = List()
-
+    harmonics           = List()
 
     new                 = Button()
     save                = Button()
@@ -287,34 +290,46 @@ class HeightEditor(HasTraits):
     reaction_type       = List()
     reaction_selected   = Str()
 
-
+    brush_width         = Range(0.0, 0.5, 0.1)
     harmonic            = Button()
     eigen               = Float(1)
-
 
     vertex_normal       = Bool(False)
     mapping_height      = Bool(True)
     mapping_color       = Bool(True)
-    complex             = Any
 
-    zoom = 1.0
+    datamodel           = Instance(DataModel)
+    orientation         = Instance(Quaternion, (0,0,0,1))
+    domain              = Instance(Domain)
+
+    zoom                = Float(1.0)
+
+    filedir             = Str('')
+    filename            = Str('')
+
+
 
     def __init__(self, datamodel):
         super(HeightEditor, self).__init__()
+
         self.datamodel = datamodel
-        self.group = datamodel.group
-
-        self.hierarchy = multicomplex.generate(self.group, 3)
-        self.complex = self.hierarchy[-1]
-
-        self.orientation = Quaternion(0,0,0,1)
 
         self.reaction_type = reaction_diffusion.ReactionDiffusion.params.keys()
         self.reaction_selected = self.reaction_type[0]
 
 
-    filedir  = Str('')
-    filename = Str('')
+    #forward datamodel properties
+    @property
+    def hierarchy(self):
+        return self.datamodel.hierarchy
+    @property
+    def complex(self):
+        return self.datamodel.complex
+    @property
+    def group(self):
+        return self.datamodel.group
+
+
     def _new_fired(self):
         #pop up file dialog
         sg = SelectGroup()
@@ -400,22 +415,14 @@ class HeightEditor(HasTraits):
 
 
     def _regenerate_fired(self):
-        self.complex = None
-
-        from .. import multicomplex
-        print 'regenreatiung'
-
+        print 'regenerating'
 
         def worker():
-            hierarchy = multicomplex.generate(self.group, self.subdivision)
-            complex = hierarchy[-1]
-
+            self.datamodel.regenerate(self.subdivision)
             def inner():
                 with RenderLock(self.scene):
                     if self.domain: self.domain.remove()
-                    self.hierarchy = hierarchy
-                    self.complex = complex
-                    self.domain = Domain(self, self.complex)
+                    self.domain = Domain(self)
                     self.domain.draw()
 
             GUI.invoke_later(inner)
@@ -426,23 +433,20 @@ class HeightEditor(HasTraits):
             worker()
 
 
-
-
     def _reaction_fired(self):
         def callback():
             with RenderLock(self.scene):
                 self.domain.redraw()
 
-        self.ta = ThreadedRDAction(self, self.complex, callback)
+        self.ta = ThreadedRDAction(self, self.datamodel, callback)
         self.ta.start()
 
 
     def _harmonic_fired(self):
         with RenderLock(self.scene):
-            self.eigen = self.complex.harmonic(self.eigen)
+##            self.eigen = self.complex.harmonic(self.eigen)
+            self.datamodel.heightfield = self.complex.P0s *  self.complex.eigenvectors[self.eigen]
             self.domain.redraw()
-
-
 
 
 
@@ -489,7 +493,7 @@ class HeightEditor(HasTraits):
 
 
             #draw actual mesh
-            self.domain = Domain(self, self.complex)
+            self.domain = Domain(self)
             self.domain.draw()
 
 
@@ -658,9 +662,9 @@ class HeightEditor(HasTraits):
 
             if len(self.trace) > 1:
                 from .. import brushes
-                brush = brushes.paint(self.hierarchy, self.trace)
+                brush = brushes.paint(self.hierarchy, self.trace, self.brush_width)
 
-                self.complex.heightfield += brush
+                self.datamodel.heightfield += brush
 
                 with RenderLock(self.scene):
 ##                    self.cursor.actor.actors[0].position = p
@@ -858,7 +862,7 @@ class HeightEditor(HasTraits):
 
 
         #start working on improved mesh, once drawing done
-        self._regenerate_fired()
+##        self._regenerate_fired()
 
 
 
@@ -919,6 +923,7 @@ class HeightEditor(HasTraits):
                             label = 'Visibility'
                         ),
                         Group(
+                            Item('brush_width'),
                             Item('subdivision'),
                             Item('regenerate', enabled_when='complex!=None'),
                             Item(name='reaction_selected', show_label=False, editor=EnumEditor(name='reaction_type')),#, mode='list' #height=0.5,

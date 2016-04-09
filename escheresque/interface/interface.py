@@ -7,6 +7,9 @@ some common interface code
 #flag to disable threaded functions that get tripped up by mayavi
 MAYAVI_THREADING = True
 
+from threading import Thread
+from collections import defaultdict
+
 import numpy as np
 
 from traits.api import HasTraits, Instance, Button, \
@@ -19,15 +22,12 @@ from mayavi import mlab
 from mayavi.core import lut_manager
 from mayavi.core.ui.api import MlabSceneModel, SceneEditor
 from mayavi.core.ui.mayavi_scene import MayaviScene
-from threading import Thread
-from collections import defaultdict
 
 from pyface.api import FileDialog, OK, confirm, YES, GUI
 
 from tvtk.api import tvtk
 
 from traits.api import push_exception_handler
-
 
 
 push_exception_handler( handler = lambda o,t,ov,nv: None,
@@ -110,7 +110,7 @@ not sure what is wrong here; lack of threadsafety might be the issue
 
 scale_flag = defaultdict(lambda: False)
 def lock_scale(obj, name, old, new):
-    print 'locking s'
+##    print 'locking s'
     if scale_flag[obj]:
         scale_flag[obj] = False
         return
@@ -122,7 +122,7 @@ def lock_scale(obj, name, old, new):
 
 position_flag = defaultdict(lambda: False)
 def lock_position(obj, name, old, new):
-    print 'locking p'
+##    print 'locking p'
     if position_flag[obj]:
         position_flag[obj] = False
         return
@@ -136,7 +136,7 @@ def lock_position(obj, name, old, new):
 
 orientation_flag = defaultdict(lambda: False)
 def lock_orientation(obj, name, old, new):
-    print 'locking o'
+##    print 'locking o'
     if orientation_flag[obj]:
         orientation_flag[obj] = False
         return

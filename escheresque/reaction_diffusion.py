@@ -1,4 +1,8 @@
 
+"""
+gray-scott RD module
+"""
+
 import numpy as np
 
 
@@ -44,8 +48,6 @@ class ReactionDiffusion(object):
     )
 
 
-
-
     def __init__(self, complex):
         self.complex = complex
 
@@ -59,17 +61,14 @@ class ReactionDiffusion(object):
         #fix boundaries
         self.state[1] = self.complex.wrap(self.complex.boundify)(self.state[1])
 
-
-
         key = 'swimming_medusae'
         self.coeff = self.params[key]
 
-        self.laplace_normalized = self.complex.wrap(self.complex.laplace_normalized)
+        self.laplace_normalized_p0 = self.complex.wrap(self.complex.laplace_normalized_p0)
 
     def diffuse(self, state, mu):
 ##        return self.complex.diffuse(state) * (mu / -self.complex.largest * 3)
-        return self.laplace_normalized(state) * (-mu * 2)
-
+        return self.laplace_normalized_p0(state) * (-mu * 2)
 
 
     def gray_scott_derivatives(self, u, v):
@@ -98,7 +97,6 @@ class ReactionDiffusion(object):
         the frames are computed 'on demand' by this function, returning/yielding
         the image frames one by one
         """
-
         #repeat 'frames' times
         for i in xrange(iterations):
             print i

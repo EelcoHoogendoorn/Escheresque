@@ -48,6 +48,7 @@ class Topology(object):
     need to add transfer operators between different levels of subdivision, for MG applications
 
     ordering information is kept metriculously
+
     """
 
     def __init__(self, position, FE, EV, FV):
@@ -186,7 +187,12 @@ class Topology(object):
 
         self.interpolation = util.coo_append(vertex_vertex, edge_vertex)
         self.restriction   = self.interpolation.T
-        self.weighting     = self.restriction * np.ones(self.P0+self.P1)      #redution of operator
+        #redution of operator
+        self.weighting     = self.restriction * np.ones(self.P0+self.P1)
+        self.interpolation_weighting     = self.interpolation * np.ones(self.P0)
+##        print self.weighting
+##        quit()
+
 
 
 
@@ -263,6 +269,10 @@ def generate(levels):
     for i in range(levels):
         t = T[-1].subdivide_topology()
         T.append(t)
+
+    for parent,child in zip(T[:-1],T[1:]):
+        parent.child = child
+        child.parent = parent
 
     return T
 

@@ -18,6 +18,8 @@ import numpy as np
 from escheresque.subdivision import Curve
 from escheresque.util import normalize
 from escheresque import multicomplex
+from escheresque import brushes
+from escheresque import poisson
 
 
 class DataModel(object):
@@ -33,20 +35,46 @@ class DataModel(object):
         self.points = []
         self.edges = []
 
-        self.level = 4
-        print 'creating dm'
+        self.generate(6)
+
+    @property
+    def complex(self):
+        return self.hierarchy[-1]
+
+    def generate(self, level):
+        self.level = level
         self.hierarchy = multicomplex.generate(self.group, self.level)
-        print 'creating dm'
-        self.complex = self.hierarchy[-1]
+
+        self.forcefield = np.zeros (self.complex.shape)
+        self.heightfield = np.ones (self.complex.shape)
+
+        self.update()
 
 
-##        self.points =  [Point(self, (1, 0, 0)),
-##                        Point(self, (0, 1, 0)),
-##                        Point(self, (0, 0, 1))]
-##        self.edges = [Edge((self.points[0], self.points[2]))]
-##
-##        self.points = []
-##        self.edges = []
+
+    def regenerate(self, level):
+        oldlevel = self.level
+        old = self.hierarchy
+        forcefield = self.complex.D2P0 * self.forcefield
+
+        self.level = level
+        self.hierarchy = multicomplex.generate(self.group, self.level)
+
+##        self.forcefield  = np.zeros(self.complex.shape)
+
+        #scale up forcefield
+        if self.level > oldlevel:
+            for l in range(oldlevel, self.level):
+                forcefield = self.hierarchy[l].interpolate_d2(forcefield)
+        if self.level < oldlevel:
+            for l in range(oldlevel, self.level, -1):
+                forcefield = old[l-1].restrict_d2(forcefield)
+
+        self.forcefield = self.complex.P0D2 * forcefield
+        self.heightfield = np.ones (self.complex.shape)
+
+        self.update()
+
 
     def primal(self):
         return normalize(self.group.primal)
@@ -65,7 +93,9 @@ class DataModel(object):
 
     def add_point(self, pos):
         """add a point to datamodel, given a world space coordinate"""
-        domain, bary = self.group.find_support(pos)
+##        domain, bary = self.group.find_support(pos)
+        domain, bary = [np.squeeze(r) for r in self.group.find_support(pos)]
+
         point = Point(self, bary, domain)
         self.points.append(point)
         return point
@@ -87,9 +117,10 @@ class DataModel(object):
         take a datamodel, and subdivide it into surface meshes, according to a list of boundary curves
         take standard boundary prop for now
         """
-        level = 7
-        from escheresque import multicomplex
-        hierarchy = multicomplex.generate(self.group, level)
+##        level = 7
+##        from . import multicomplex
+##        hierarchy = multicomplex.generate(self.group, level)
+        hierarchy = self.hierarchy
         complex = hierarchy[-1]
 
         from escheresque import computational_geometry
@@ -126,6 +157,13 @@ class DataModel(object):
         return partitions
 
 
+    def sample(self, points):
+        return brushes.Mapping(self.hierarchy, points).sample(self.heightfield)
+
+    def update(self):
+        self.heightfield = poisson.solve_poisson(self)
+
+
 
 #valid constraint values (enumerated for UI convenience)
 Constraints  = [None,
@@ -142,16 +180,15 @@ class Point(object):
     point specified as bary weighting over fundamental domain
     first and last half of points may have different orientation
     """
-    def __init__(self, datamodel, bary, domain = (0,0,0), constraint = None):
+    def __init__(self, datamodel, bary, domain, constraint = None):
         self.datamodel = datamodel
         self.group = datamodel.group
         self.domain = domain                #domain subtile; tile, orientation, rotation
         self.constraint = constraint        #tuple of bool pmd or none
         self.bary = self.normalize(np.array(bary, np.float))
+        self.radius = 1
 
-    def normalize(self, bary):
-        return bary/bary.sum()
-
+    #access domain properties
     @property
     def index(self):
         return self.domain[0]
@@ -165,6 +202,10 @@ class Point(object):
     def get_domain(self):
         return self._domain
     domain = property(get_domain, set_domain)
+
+    #property to auto-norm bary coords?
+    def normalize(self, bary):
+        return bary/bary.sum()
 
     def instantiate(self):
         """return position array"""
@@ -188,7 +229,7 @@ class Point(object):
 
         #find new domain for zero point if out of current one
         if np.any(self.bary<0):
-            self.domain, self.bary = self.group.find_support(position)
+            self.domain, self.bary = [np.squeeze(r) for r in self.group.find_support(position)]
 
         #apply constraint
         position = self.constrain(position)
@@ -197,7 +238,10 @@ class Point(object):
 
 
     def constrain(self, position):
-        """constrain bary coords, given world coords of zero transform point"""
+        """
+        constrain bary coords, given world coords of zero transform point
+        return constrained point in world coords
+        """
 #        print self.domain
         B = self.group.basis[self.domain]
         B = B * self.constraints[np.newaxis,:]      #zero out deactived basis points
@@ -205,8 +249,10 @@ class Point(object):
         self.bary = self.normalize(bary)
         return normalize( np.dot(B, self.bary))
 
-    @property
-    def constraints(self):
+
+    domain = property(get_domain, set_domain)
+
+    def get_constraint(self):
         if self.constraint is None:
             return np.ones(3)
         else:
@@ -220,6 +266,8 @@ class Point(object):
 
 
 
+
+
 class Edge(object):
     """
     connects any two points
@@ -228,9 +276,12 @@ class Edge(object):
     #tuple of points, and the instance index to which the edge is rooted
     points     = (None, None)
     transforms = ((0,0), (0,0))  #transform relative to root domain, which define the root edge
-    curve      = None           #subdivision curve; this should really be here. cmputation and caching should be handled by the editor
-    color      = (0,0,0)
+
+    curve      = None           #subdivision curve; this should really be here. controlpoints are part of datamodel. cmputation and caching should be handled by the editor
+    color      = (0,0,0)        #for giggles
     boundary   = True
+    driving    = True           #driving edges enforce their radius on the relief
+    width      = 0.01           #smoothing width to apply to get stencil
 
     def __init__(self, points, transforms = ((0,0), (0,0))):
         self.points     = points
@@ -248,9 +299,17 @@ class Edge(object):
 
     def instantiate(self):
         """"returns actual curve data by subdivision?"""
+        #this is a hack... find better way to propagate point radii
+        self.curve.radius[0] = self.points[1].radius
+        self.curve.radius[-1] = self.points[0].radius
+
         return self.curve.curve()
     def instantiate_cp(self):
         """"returns actual curve data by subdivision?"""
+        #this is a hack...
+        self.curve.radius[0] = self.points[1].radius
+        self.curve.radius[-1] = self.points[0].radius
+
         return self.curve.controlpoints()
 
     @property
@@ -260,3 +319,16 @@ class Edge(object):
     def datamodel(self):
         return self.points[0].datamodel
 
+
+class SubdivisionCurve(Edge):
+    """
+    subdivision
+    extend edge with control points
+    control points are permanent
+    subdivided points are not
+    """
+    control = None
+
+    @property
+    def points(self):
+        return len(self.control)

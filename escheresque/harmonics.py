@@ -4,22 +4,26 @@ eigen module
 find harmonic functions
 builtin ones fail for multicomplex
 
-actually, this is incorrect.
 
+
+we need biggest eigenvalue for optimal time integration
+this should be easy to find
+given that we have an efficient multigrid solver, the low eigenvectors should also be easy to find
+smallest eigenvalue is good to have for the sake of precise scale-independent diffusion
+
+can we speed up anisotropic diffusion with implicit method?
+largest stable timestep depends on both matrix and iterand
+the smoother the solution is, the bigger timesteps we may take
+
+
+should add multigrid-enabled eigensolvers here
 """
+
+
 import numpy as np
 
-def implicit_diffusion(laplace, mu, rhs, steps = 1):
-    """
-    take in 2d vectors, interface with 1d cg code
 
-    build operator; apply it several times
-    """
-    def operator(x):
-        return laplace(x) - x
 
-    for i in xrange(steps):
-        x = cg_wrapper(operator, rhs, x)
 
 
 
@@ -174,6 +178,7 @@ def inverse_iteration(complex, operator, shift, current = None):
 
     return x, shift
 
+
 def eigs_wrapper(complex, operator, shift, current, k = 20):
     from scipy.sparse.linalg import eigs, LinearOperator
     repeats = 1
@@ -193,12 +198,178 @@ def eigs_wrapper(complex, operator, shift, current, k = 20):
     I = np.argsort(s)
     s = s[I]
     V = V[:,I]
-    print s[i]
 
-    return V[:,i].reshape(shape), i
-
+    return V[:,i].reshape(shape), s[i]
 
 
+def eigs_wrapper(complex, operator, shift, current, k = 20):
+    from scipy.sparse.linalg import eigs, LinearOperator
+
+    repeats = 1
+    def tile(x):
+        return np.array([x]*repeats)
+
+    shape =(repeats,) + complex.shape
+    shape = complex.shape
+    N = complex.size * repeats
+    def flat(x):
+        return np.ravel(( operator(x.reshape(shape))))
+    A = LinearOperator((N,N), flat, dtype=np.float)
+    i = int(shift)
+    s, V = eigs(A, k=k, which='SM', tol=1e-7, v0=np.ravel(current))
+    s = s.real
+    V = V.real
+    I = np.argsort(s)
+    s = s[I]
+    V = V[:,I]
+
+    return complex.P0D2[None,:,:] *  V.T.reshape((-1,)+ shape), s
+##    return V[:,i].reshape(shape), s[i]
+
+
+
+
+
+def largest_harmonic(complex):
+    """find extreme eigenvalues of laplace operator"""
+    from scipy.sparse import linalg
+    A = linalg.LinearOperator((complex.size, complex.size), complex.wrap(complex.laplace_d2))
+
+    v0 = complex.boundify( np.random.random(complex.shape))
+    v0 -= v0.mean()
+    v0 = np.ravel(v0)
+
+    s, V = linalg.eigs(A, k=1, which='LR', tol=1e-5, v0=v0)
+    return s.real[0]
+
+
+
+
+
+
+def full_eigs(complex):
+    """
+    brute force full eigs computation for small size systems.
+
+    we would like to obtain a symm matrix
+    system matrix should be full matrix with boundary-violating directions clamped out
+    boundify -> transform to other side should be rhs operator?
+    boundify term should be in operator
+    deboundify(boundify) is unity op for elements in bounded space
+    laplace_P0D2 deboundify boundify d2 =  P0D2 d2
+
+    work in special d2 space, needed for matrix symmetry
+    convert implicit operator to dense matrix by multiplication with identity matrix
+    """
+    from scipy.linalg import eigh
+    def L(x):
+        x = x.T
+        y = np.empty_like(x)
+        for i in xrange(len(x)):
+            y[i] = complex.laplace_P0D2_special(x[i].reshape(complex.shape)).ravel()
+        return y.T
+    def db(x):
+        x = x.T
+        y = np.empty_like(x)
+        for i in xrange(len(x)):
+            y[i] = complex.deboundify( complex.boundify(x[i].reshape(complex.shape))).ravel()
+        return y.T
+    #make sure we start with all components
+    V0 = db(np.identity(complex.size))
+    A =  L(V0)
+    assert(np.allclose(A, A.T))
+    P0D2 = np.repeat( complex.geometry.P0D2[:,None], complex.index, axis=1)
+    B = np.diag(P0D2.ravel())
+    v,V = eigh(A, B)        #solve generalized eigenproblem
+    V = V.real
+    v = v.real
+    I = np.argsort(v)
+    V = V[:,I]
+    v = v[I]
+    I = v>1e-3
+    V = V[:,I]
+    v = v[I]
+
+
+    #print 'are we in subspace? need all zeros'
+    assert(np.allclose(V, db(V)))
+
+
+    #append zero eigenvector
+    V = np.concatenate(((1 / P0D2).reshape(1,-1).T, V), axis=1)
+    v = np.concatenate(([0], v))
+
+    #map vectors to midspace
+    V = np.dot( np.sqrt(B), V)
+
+    V[:,0] /= np.linalg.norm(V[:,0])
+
+    V = V.T
+
+    V = V.reshape((-1,)+complex.shape)
+
+    return V, v
+
+
+
+def refine_eigs(complex, V0, v0):
+    from . import multigrid
+    """
+    refine a set of eigenvectors.
+    multigrid-type approach
+    we rely on availability of inverse
+
+    orthonormalize over all, for multiple vecs
+    """
+    def invert_special_mid(sm, v):
+        D2 = complex.boundify( complex.d2s * sm)
+##        D2 =  complex.D2s * sm
+        D2 = multigrid.solve_poisson_rec( complex.hierarchy, D2, D2/v)
+##        return complex.sD2 * D2
+        return complex.sd2 * complex.deboundify( D2)
+    def diffuse_special_mid(sm, v):
+        """isnt this to be preferred over inversion?"""
+        D2 = complex.boundify( complex.d2s * sm)
+        for i in xrange(10):
+            D2 = complex.diffuse_normalized_d2(D2)
+        return complex.sd2 * complex.deboundify( D2)
+
+    V = np.empty_like(V0)
+    v = np.empty_like(v0)
+
+
+    V[0] = V0[0] / np.linalg.norm(V0[0].ravel())
+    v[0] = 0
+
+    for i in xrange(1, len(v0)):
+        V[i] = V0[i]
+
+    for r in xrange(3):
+        for i in xrange(1, len(v0)):
+            q = V[i]
+##            q = invert_special_mid(q, v0[i])
+            q = diffuse_special_mid(q, v0[i])
+
+            q = q / np.linalg.norm( q.ravel())
+
+            #ensure orthonormalization against lower vectors
+            for j in xrange(0, i):
+                z = V[j]
+                q = q - z * np.dot(q.ravel(), z.ravel())# / np.dot(z.ravel(),z.ravel()))
+##            q = q - np.einsum(',->ni', q, V[:i])
+            V[i] = q
+
+
+    #compute eigenvalues for the new eigenvectors
+    for i in xrange(1, len(v0)):
+        z = V[i]
+        q = complex.sP0 * complex.laplace_P0D2_special(complex.d2s * z)
+        v[i] = np.linalg.norm(q.ravel()) / np.linalg.norm(z)
+
+##    Q = V.reshape((len(v),-1))
+##    print np.dot(Q, Q.T)
+
+    return V, v
 
 
 

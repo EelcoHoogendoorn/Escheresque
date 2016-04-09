@@ -19,33 +19,25 @@ constrained triangulation is a messy problem, and on the sphere ne might think i
 but by exploiting this duality we can kill two t-rexes with one pebble.
 """
 
-import numpy as np
 from itertools import izip
+
+import numpy as np
+import numpy_indexed as npi
+
 from scipy.spatial import cKDTree as KDTree
-import matplotlib.pyplot as pp
 
 from escheresque import util
 
 
 
-def voidview(arr):
-    """view the last axis as a void object. faster form of lexsort"""
-    return np.ascontiguousarray(arr).view(np.dtype((np.void, arr.dtype.itemsize * arr.shape[-1]))).reshape(arr.shape[:-1])
-
-##quit()
 def merge_geometry(points, idx=None):
     """marge identical points in an NxM point array, reducing an indiex array into the point array at the same time"""
-    _, _idx, _inv = np.unique(voidview(points), return_index=True, return_inverse=True)
+    _, _idx, _inv = npi.unique(points, return_index=True, return_inverse=True)
     if idx is None:
         return points[_idx]
     else:
         return points[_idx], _inv[idx]
 
-##def split_geometry(points, idx, elements):
-##    """split geometry by element vector"""
-##    _idx = idx[elements]
-##    active_points, inv = np.unique(_idx, return_inverse=True)
-##    return points[active_points], inv.reshape(_idx.shape)
 
 def squeeze_geometry(points, idx):
     """compact geometry description, removing unused points, and adjusting index accordingly"""
@@ -252,9 +244,9 @@ def order_edges(edges):
 ##def label_edges(idx):
 ##    """convert Nx2 edge index array to N unique labels. could reaplce with voidview if searchosrted works on it"""
 ##    return idx.astype(np.int32).ravel().view(np.int64).reshape(idx.shape[:-1])
-def label_edges(edges):
-    """return unique bytecode for each edge, independent of vertex ordering"""
-    return voidview(order_edges(edges))
+# def label_edges(edges):
+#     """return unique bytecode for each edge, independent of vertex ordering"""
+#     return voidview(order_edges(edges))
 
 
 def partition(points, triangles, curve):
@@ -282,16 +274,17 @@ def partition(points, triangles, curve):
     print 'partitioning mesh'
 
     #construct edge information
-    tri_edges_all     = triangle_edges(triangles)
-    tri_edges_id      = label_edges(tri_edges_all)
 
+    unique, inverse = npi.unique(
+        order_edges(triangle_edges(triangles)),
+        return_inverse = True)
 
-    tri_edges_unique_id, inverse = np.unique(tri_edges_id, return_inverse = True)
-    FE = inverse.reshape(len(triangles), 3)
-    EF = np.argsort(inverse).reshape(len(tri_edges_unique_id),2) // 3   #this gives incidence relations
+    FE =            inverse .reshape(-1,3)
+    EF = np.argsort(inverse).reshape(-1,2) // 3   #this gives incidence relations
 
     #determine which edges are curve edges
-    curve_edges = np.searchsorted(tri_edges_unique_id, label_edges(curve))
+    # curve_edges = np.searchsorted(unique, label_edges(curve))
+    curve_edges = npi.indices(unique, order_edges(curve))
 
 
     if True:
@@ -335,30 +328,39 @@ def partition(points, triangles, curve):
 
     return sorted(partitions, key=lambda p:len(p[0]))
 
+def multiplicity(keys):
+    unique, inverse = np.unique(keys, return_inverse=True)
+    count = np.zeros(len(unique),np.int)
+    np.add.at(count, inverse, 1)
+    return count[inverse]
 
 def extrude(points, triangles, outer, inner):
     """
     radially extrude a surface mesh into a solid
     given a bounded surface, return a closed solid
+    create extra options; rather than plain radial extrude,
+    we can also do swepth sphere extrude; better for casting
     """
     #construct edge information
-    tri_edges_all = triangle_edges(triangles)
-    tri_edges_id  = label_edges(tri_edges_all)
+    tri_edges_all = triangle_edges(triangles)       #nx2 pairs of indices
+    # tri_edges_id  = label_edges(tri_edges_all)
 
     #count the number of times each edge occurs. cant we use searchsorted here? surely this isnt most elegant way?
-    edges, inverse  = np.unique(tri_edges_id, return_inverse = True)
-    _, idx          = np.unique(np.sort(inverse), return_index=True)
-    incidence_count = np.diff(np.append(idx,len(inverse)))[inverse]
-
-    #find boundary indices, in original oriented ordering
-    boundary = incidence_count == 1
+    #use group.multiplicity here
+##    edges, inverse  = np.unique(tri_edges_id, return_inverse = True)
+##    _, idx          = np.unique(np.sort(inverse), return_index=True)
+##    incidence_count = np.diff(np.append(idx,len(inverse)))[inverse]
+##
+##    #find boundary indices, in original oriented ordering
+##    boundary = incidence_count == 1
+    boundary = npi.multiplicity(tri_edges_all) == 1
     eb = tri_edges_all[boundary]
     if len(eb) == 0: raise Exception('Surface to be extruded is closed, thus does not have a boundary')
 
     #construct closed solid
     boundary_tris = np.vstack((
-        np.concatenate((eb[:,::+1], eb[:,0:1]+len(points)),axis=1),
-        np.concatenate((eb[:,::-1]+len(points), eb[:,1:2]),axis=1)))
+        np.concatenate((eb[:,::-1], eb[:,0:1]+len(points)),axis=1),
+        np.concatenate((eb[:,::+1]+len(points), eb[:,1:2]),axis=1)))
 
     copy_tris = triangles[:,::-1]+len(points)
 
@@ -368,6 +370,78 @@ def extrude(points, triangles, outer, inner):
     return solid_points, solid_tris
 
 
+def extrude(outer, inner, triangles):
+    """
+    radially extrude a surface mesh into a solid
+    given a bounded surface, return a closed solid
+    create extra options; rather than plain radial extrude,
+    we can also do swepth sphere extrude; better for casting
+    """
+    points = len(outer)
+
+    #construct edge information
+    tri_edges_all = triangle_edges(triangles)       #nx2 pairs of indices
+
+    boundary = npi.multiplicity(tri_edges_all) == 1
+    eb = tri_edges_all[boundary]
+    if len(eb) == 0: raise Exception('Surface to be extruded is closed, thus does not have a boundary')
+
+    #construct closed solid
+    boundary_tris = np.vstack((
+        np.concatenate((eb[:,::-1], eb[:,0:1]+points),axis=1),
+        np.concatenate((eb[:,::+1]+points, eb[:,1:2]),axis=1)))
+
+    copy_tris = triangles[:,::-1]+points
+
+    solid_points = np.vstack((outer, inner))
+    solid_tris   = np.vstack((triangles, copy_tris, boundary_tris))
+
+    return solid_points, solid_tris
+
+
+def swept_extrude(outer, inner, thickness):
+    """
+    outer is a copy of inner, possibly with added detail, but with identical boundary
+    we seek to create a castable object with a constant thickness 'thickness'
+    to that end, we need to match the boundary points to make a closed extrusion
+    extrusion is done iteratively
+    we init by radially shinking the inner mesh by thickness
+    """
+    def radial_displace(p, d):
+        """move points radially inwards"""
+        l = np.linalg.norm(p, 2, axis=1)
+        return p * ((l-d) / l)[..., None]
+
+    def angle(A, B):
+        return util.dot( util.normalize(A), util.normalize(B))
+
+    #find boundary edges
+    op, ot = outer
+    ip, it = inner
+    #find mapping between boundary points and boundary edges
+
+    #move inner points radially inwards as speedup step
+    ip = radial_displace(ip, thickness)
+    #incremental updates
+    otree = KDTree(op)
+    for i in range(3):
+        #compute radial updates
+        itree = KDTree(ip)
+        pairs = itree.sparse_distance_matrix(otree, thickness, 2)
+        idx  = np.array(pairs.keys())
+        dist = np.array(pairs.values())
+
+        delta = ip[idx[:,0]] - op[idx[:,1]]
+
+        dec = (thickness-dist) / angle(ip[idx[:,0]], delta)
+        uidx, maxdec = group_by(idx[:,0]).max(dec)
+        ip[uidx] = radial_displace(ip[uidx], maxdec)
+
+        #perform light smoothing
+        #do we need original space for this?
+
+    #return inner surface swepth by thickness
+    return ip, it
 
 
 
