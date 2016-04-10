@@ -101,7 +101,7 @@ class Curve(object):
         return self.apply(self.Core(3, True))
     def curve(self):
         """compute the curve itself"""
-        return self.apply(self.Core(6, False))
+        return self.apply(self.Core(5, False))
 
 
     def Refine(self, P, w):

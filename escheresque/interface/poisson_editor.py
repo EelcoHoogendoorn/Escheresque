@@ -593,16 +593,16 @@ class PoissonEditor(HasTraits):
 
             for i,(p,t) in enumerate(partitions):
                 p = p * self.datamodel.sample(p)[:,None]
-##                p = p * brushes.sample_height(self.datamodel.hierarchy, p, self.datamodel.complex.heightfield)[:,None]
-                # p,t = computational_geometry.extrude(p, t, 1, 0.95)
-                p,t = computational_geometry.extrude(p*1, p*0.95, t)
+                # p,t = computational_geometry.extrude(p*1, p*0.95, t)
+                p,t = computational_geometry.swept_extrude(p, t, 0.1)
 
-##                q = p.mean(axis=0)
-##                x,y,z= p.T + q[:,None]/4
-##                mlab.triangular_mesh(x,y,z, t)
-##                mlab.triangular_mesh(x,y,z, t, color = (0,0,0), representation='wireframe')
 
                 stl.save_STL(filename.format(i), p[t])
+
+            q = p.mean(axis=0)
+            x,y,z= p.T + q[:,None]/4
+            mlab.triangular_mesh(x,y,z, t)
+            mlab.triangular_mesh(x,y,z, t, color = (0,0,0), representation='wireframe')
 
 ##            mlab.show()
 ##        if False:

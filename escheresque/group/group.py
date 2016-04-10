@@ -297,29 +297,3 @@ class Group(object):
         shape = basis.shape[:-2]
         return np.sign( np.array( [np.linalg.det(b) for b in basis.reshape(-1,3,3)])).reshape(shape)
 
-
-
-
-##class Symmetry(object):
-##    """maybe just use a triplet of bools as a constraint? easier to pickle without version conflict"""
-##    def __init__(self, description, constraints):
-##        self.description = description + str(tuple( constraints))
-##        self.constraints = np.array(constraints)
-##
-##symmetries = [Symmetry('primal', (1,0,0)), Symmetry('middle', (0,1,0)), Symmetry('dual  ', (0,0,1)),
-##              Symmetry('mirror', (0,1,1)), Symmetry('mirror', (1,0,1)), Symmetry('mirror', (1,1,0))]
-
-
-
-##from collections import OrderedDict
-##constraints_dict = OrderedDict()
-##for i, c in enumerate( constraints):
-##    constraints_dict[c] = '{i}: {n}'.format(i=i,n=str(c))
-
-
-
-##
-##symdict[None] = 'None'
-##for s in symmetries:
-##    symdict[s] = s.description
-##symdict = {s:s.description for s in symmetries}

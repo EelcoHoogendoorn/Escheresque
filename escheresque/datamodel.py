@@ -12,6 +12,7 @@ store entire multicomplex here too?
 at least store level, and heightmap
 generalize to editing on a composition of layers?
 """
+import cPickle as pickle
 
 import numpy as np
 
@@ -20,6 +21,7 @@ from escheresque.util import normalize
 from escheresque import multicomplex
 from escheresque import brushes
 from escheresque import poisson
+from escheresque import computational_geometry
 
 
 class DataModel(object):
@@ -84,11 +86,9 @@ class DataModel(object):
         return normalize(self.group.dual)
 
     def save(self, filename):
-        import cPickle as pickle
         pickle.dump(self, file(filename, 'wb'), -1)
     @staticmethod
     def load(filename):
-        import cPickle as pickle
         return pickle.load(file(filename, 'rb'))
 
     def add_point(self, pos):
@@ -123,8 +123,6 @@ class DataModel(object):
         hierarchy = self.hierarchy
         complex = hierarchy[-1]
 
-        from escheresque import computational_geometry
-
         #concat all curves
         curve_p   = [transform for e in self.edges if e.boundary for mirrors in e.instantiate() for transform in mirrors]
         offset    = np.cumsum([len(p) for p in curve_p])
@@ -158,6 +156,7 @@ class DataModel(object):
 
 
     def sample(self, points):
+        """sample the heightfield of the datamodel at points"""
         return brushes.Mapping(self.hierarchy, points).sample(self.heightfield)
 
     def update(self):

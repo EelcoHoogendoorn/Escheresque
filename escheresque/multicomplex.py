@@ -13,10 +13,12 @@ so numba dependency can be made optional
 import numpy as np
 import itertools
 
-from escheresque import util
-
 from numba import jit, autojit
 from numba.types import void, float32, float64, int32, pyobject
+
+from escheresque import util
+from escheresque import geometry
+from escheresque import harmonics
 
 
 @jit(void(pyobject, float32[:,:,:,:], float32[:,:,:]))
@@ -171,7 +173,6 @@ def boundify_normals_sparse_numba():
 
 
 
-
 @jit(float32[:,:,:](pyobject, float32[:,:]))
 def vertex_normals_numba(complex, radius):
 
@@ -209,39 +210,6 @@ def vertex_normals_numba(complex, radius):
 
 
 
-
-
-##def vertex_normals_python(complex, radius):
-##    """
-##    efficiency here is essentially optimal
-##    could vectorize loop, but wouldnt matter much
-##    """
-##    group = complex.group
-##    geometry = complex.geometry
-##    topology = geometry.topology
-##
-##    FV = topology.FV
-##    PP = geometry.decomposed
-##    B = group.basis[:,0,0]      #grab all root bases
-##
-##    def comp_v_normal(h, b):
-##        b = util.normalize(b.T).T               #now every row is a normalized vertex
-##        mirror = np.sign(np.linalg.det(b))      #flip sign for mirrored domains
-##        P = np.dot(b, PP.T).T * h[:, None]      #go from decomposed coords to local coordinate system
-####        tri_normal = util.null(util.grab(topology.FV, topology.T10 * P))
-##        tri_normal = np.cross(P[FV[:,1]]-P[FV[:,0]], P[FV[:,2]]-P[FV[:,0]])
-##        tri_normal *= mirror
-##        vert_normal = topology.T02 * tri_normal     #sum all triangle contributions around vertex
-##        return vert_normal
-##
-##    #for each root fundamental domain; sure is ugly relative to proper vectorization..
-##    index = complex.index
-##    vert_normals = np.empty((index,)+PP.shape)
-##    for i in xrange(index):
-##        vert_normals[i] = comp_v_normal(radius[:,i], B[i])
-##    return vert_normals
-####    import itertools
-####    return np.array( [comp_v_normal(h, b) for h,b in itertools.izip( radius.T, B)])     #index x verts x 3
 
 def triangle_normals(complex, radius, index):
     """triangle normals for a root index. do for each index?"""
@@ -298,6 +266,7 @@ class ImplicitLaplace(object):
         self.shape = (len(P0D2),)*2
     def __mul__(self, x):
         return laplace_numba(self.EV, self.D1P1, x)
+
 
 
 class MultiComplex(object):
@@ -468,7 +437,6 @@ class MultiComplex(object):
         """
         precompute harmonics, for various purposes
         """
-        from . import harmonics
         if self.size < 400:     #need at least 360 dofs, so we can handle null symm icosahedral
             print 'dense'
             self.complete_eigen_basis = True
@@ -562,7 +530,6 @@ class MultiComplex(object):
 
 
 
-from . import geometry
 def generate(group, levels):
     """
     add parent/child pointers, to make mg type code more clean
@@ -582,23 +549,23 @@ def generate(group, levels):
 
 
 
-class Hierarchy(object):
-    def __init__(self):
-        self.group = None
-
-    def levels(self):
-        """number of subdivisions"""
-        return len(self.stack)-1
-    def __getitem__(self,idx):
-        return self.stack[idx]
-
-    def subdivide(self):
-        """extend heirarchy by one level"""
-        complex = self[-1]
-        t = complex.topology.subdivide_topology()
-        position, planes = complex.topology.subdivide_position(complex.geometry.primal)
-        g = Geometry(t, position, planes)
-        mc = MultiComplex(self.group, g)
-        self.stack.append(mc)
-
-
+# class Hierarchy(object):
+#     def __init__(self):
+#         self.group = None
+#
+#     def levels(self):
+#         """number of subdivisions"""
+#         return len(self.stack)-1
+#     def __getitem__(self,idx):
+#         return self.stack[idx]
+#
+#     def subdivide(self):
+#         """extend heirarchy by one level"""
+#         complex = self[-1]
+#         t = complex.topology.subdivide_topology()
+#         position, planes = complex.topology.subdivide_position(complex.geometry.primal)
+#         g = geometry.Geometry(t, position, planes)
+#         mc = MultiComplex(self.group, g)
+#         self.stack.append(mc)
+#
+#

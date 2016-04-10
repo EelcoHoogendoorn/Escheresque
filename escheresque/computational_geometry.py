@@ -175,7 +175,7 @@ def triangulate(points, curve, curve_idx):
     #so only do the most pressing ones first, then iterate to convergence
     old_curve = curve
     old_curve_idx = curve_idx
-    for i in range(10):
+    while True:
         newcurve, newcurve_idx = refine_curve(points, curve, curve_idx)
         #print len(newcurve)
         if len(newcurve)==len(curve):
@@ -195,7 +195,7 @@ def triangulate(points, curve, curve_idx):
     editor is very unresponsive at this level anyway
     """
     print 'triangulating'
-    allpoints = np.vstack((curve, points))    #include origin; facilitates clipping
+    allpoints = np.concatenate((curve, points))    #include origin; facilitates clipping
     from scipy.spatial import ConvexHull
     hull = ConvexHull(util.normalize(allpoints))
     triangles = hull.simplices
@@ -204,7 +204,6 @@ def triangulate(points, curve, curve_idx):
     print 'ordering triangles'
     FP        = util.gather(triangles, allpoints)
     mid       = FP.sum(axis=1)
-#    normal    = util.adjoint( FP - np.roll(FP, 1, axis=1)).sum(axis=1)
     normal    = util.normals(FP)
     sign      = util.dot(normal, mid) > 0
     triangles = np.where(sign[:,None], triangles[:,::+1], triangles[:,::-1])
@@ -214,11 +213,8 @@ def triangulate(points, curve, curve_idx):
 
 def triangle_edges(triangles):
     """construct 3 edges for each triangle"""
-    edges = np.empty((len(triangles), 3, 2), np.int32)
-    for i in range(3):
-        edges[:,i,0] = triangles[:,i-2]
-        edges[:,i,1] = triangles[:,i-1]
-    return edges.reshape(-1,2)
+    edges = triangles[:, [[1, 2], [2, 0], [0, 1]]]
+    return edges.reshape(-1, 2)
 
 
 def order_edges(edges):
@@ -255,33 +251,6 @@ def partition(points, triangles, curve):
     return sorted(partitions, key=lambda p: len(p[0]))
 
 
-def extrude(points, triangles, outer, inner):
-    """
-    radially extrude a surface mesh into a solid
-    given a bounded surface, return a closed solid
-    create extra options; rather than plain radial extrude,
-    we can also do swepth sphere extrude; better for casting
-    """
-    #construct edge information
-    tri_edges = order_edges(triangle_edges(triangles))       #nx2 pairs of indices
-
-    boundary = npi.multiplicity(tri_edges) == 1
-    eb = tri_edges[boundary]
-    if len(eb) == 0: raise Exception('Surface to be extruded is closed, thus does not have a boundary')
-
-    #construct closed solid
-    boundary_tris = np.vstack((
-        np.concatenate((eb[:,::-1], eb[:,0:1]+len(points)),axis=1),
-        np.concatenate((eb[:,::+1]+len(points), eb[:,1:2]),axis=1)))
-
-    copy_tris = triangles[:,::-1]+len(points)
-
-    solid_points = np.vstack((points*np.atleast_1d([outer])[:,None], points*np.atleast_1d(inner)[:,None]))
-    solid_tris   = np.vstack((triangles, copy_tris, boundary_tris))
-
-    return solid_points, solid_tris
-
-
 def extrude(outer, inner, triangles):
     """
     radially extrude a surface mesh into a solid
@@ -299,19 +268,20 @@ def extrude(outer, inner, triangles):
     if len(eb) == 0: raise Exception('Surface to be extruded is closed, thus does not have a boundary')
 
     #construct closed solid
-    boundary_tris = np.vstack((
+    boundary_tris = np.concatenate((
         np.concatenate((eb[:,::-1], eb[:,0:1]+points),axis=1),
-        np.concatenate((eb[:,::+1]+points, eb[:,1:2]),axis=1)))
+        np.concatenate((eb[:,::+1]+points, eb[:,1:2]),axis=1)
+    ))
 
     copy_tris = triangles[:,::-1]+points
 
-    solid_points = np.vstack((outer, inner))
-    solid_tris   = np.vstack((triangles, copy_tris, boundary_tris))
+    solid_points = np.concatenate((outer, inner))
+    solid_tris   = np.concatenate((triangles, copy_tris, boundary_tris))
 
     return solid_points, solid_tris
 
 
-def swept_extrude(outer, inner, thickness):
+def swept_extrude(outer, triangles, thickness):
     """
     outer is a copy of inner, possibly with added detail, but with identical boundary
     we seek to create a castable object with a constant thickness 'thickness'
@@ -319,45 +289,69 @@ def swept_extrude(outer, inner, thickness):
     extrusion is done iteratively
     we init by radially shinking the inner mesh by thickness
     """
-    def radial_displace(p, d):
-        """move points radially inwards"""
-        l = np.linalg.norm(p, 2, axis=1)
-        return p * ((l-d) / l)[..., None]
+    assert thickness > 0
+    tree = KDTree(outer)
 
-    def angle(A, B):
-        return util.dot( util.normalize(A), util.normalize(B))
+    outer_radius = np.linalg.norm(outer, axis=1)
+    inner = outer
 
-    #find boundary edges
-    op, ot = outer
-    ip, it = inner
-    #find mapping between boundary points and boundary edges
-
-    #move inner points radially inwards as speedup step
-    ip = radial_displace(ip, thickness)
     #incremental updates
-    otree = KDTree(op)
-    for i in range(3):
-        #compute radial updates
-        itree = KDTree(ip)
-        pairs = itree.sparse_distance_matrix(otree, thickness, 2)
-        idx  = np.array(pairs.keys())
-        dist = np.array(pairs.values())
+    while True:
+        # find nearest point for each inner point
+        dist, idx = tree.query(inner, k=1)
 
-        delta = ip[idx[:,0]] - op[idx[:,1]]
+        inner_radius = np.linalg.norm(inner, axis=1)
+        radial_dist = inner_radius - outer_radius[idx]
+        ortho_dist2 = dist**2 - radial_dist**2
+        new_radius = outer_radius[idx] - np.sqrt(1 - ortho_dist2 / thickness ** 2) * thickness
 
-        dec = (thickness-dist) / angle(ip[idx[:,0]], delta)
-        uidx, maxdec = group_by(idx[:,0]).max(dec)
-        ip[uidx] = radial_displace(ip[uidx], maxdec)
-
-        #perform light smoothing
-        #do we need original space for this?
+        if np.allclose(inner_radius, new_radius):
+            break
+        inner = inner / (inner_radius / new_radius)[:, None]
 
     #return inner surface swepth by thickness
-    return ip, it
+    return extrude(outer, inner, triangles)
+
+
 
 
 
 if __name__=='__main__':
+
+    if True:
+        from escheresque.datamodel import DataModel
+        from mayavi import mlab
+        from escheresque import stl, brushes
+        import os
+
+        path = r'C:\Users\Eelco\Dropbox\Git\Escheresque\data'
+        filename = 'turtles.sch'
+
+        datamodel = DataModel.load(os.path.join(path, filename))
+        # datamodel.generate(5)
+        partitions = datamodel.partition()
+
+        filename = r'C:\Users\Eelco\Dropbox\Git\Escheresque\data\part{0}.stl'
+
+        for i, (p, t) in enumerate(partitions):
+            p = p * datamodel.sample(p)[:, None]
+            thickness = 0.03
+            p, t = swept_extrude(p, t, thickness)
+
+            stl.save_STL(filename.format(i), p[t])
+
+
+        q = p.mean(axis=0)
+        x, y, z = p.T + q[:, None] / 4
+        mlab.triangular_mesh(x, y, z, t)
+        # mlab.triangular_mesh(x, y, z, t, color=(0, 0, 0), representation='wireframe')
+        mlab.show()
+        quit()
+
+
+
+
+
     #test triangulation
 
     #random points on the sphere

@@ -2,13 +2,14 @@
 painting brush module
 rename: the essence of this module is in mapping between intrinsic mesh space and embedding R3 space
 painting is just one application thereof
-
 """
 
+import itertools
 
 import numpy as np
-from . import util
-import itertools
+
+from escheresque import util
+from escheresque import multigrid
 
 
 def pick_primal_triangles(hierarchy, points):
@@ -30,8 +31,15 @@ class Mapping(object):
     """
 
     def __init__(self, hierarchy, points):
-        """
-        pick a set of worldcoords on the sphere
+        """pick a set of worldcoords on the sphere
+
+        Parameters
+        ----------
+        hierarchy : list of MultiComplex
+        points : ndarray, [n, 3], float
+
+        Notes
+        -----
         hierarchical structure of the triangles allows finding intersection triangle quickly
         """
         self.hierarchy = hierarchy
@@ -43,18 +51,8 @@ class Mapping(object):
         domains, baries = group.find_support(self.points)    #find out which fundamental domain tile each point is in
         local = np.dot(group.basis[0,0,0],baries.T).T   #map all points to the root domain for computations; all domains have identical tesselation anyway
 
-
+        # get the face index for each point
         faces = pick_primal_triangles(hierarchy, local)
-##        #next, we need to find the mesh triangle index for each point
-##        #we can use a simple tree method. simplicity hinges on same argument as multigrid, of exact recursive divisibility of the mesh
-##        faces = np.zeros(len(self.points), np.int)           #all points start their search at the root triangle
-##        for complex in hierarchy[1:]:                   #recurse, skipping root level
-##            planes = complex.geometry.planes[faces]     #grab the three precomputed planes subdividing each triangle
-##            signs = np.einsum('ijk,ik->ij', planes, local) > 0  #where are we, with respect to the three planes?
-##            #only one sign should be positive .argmax is numerically stable; even in case of multiple positive values, we get a valid result
-##            index = np.argmax(signs, axis=1) + 1        #corner tri index is argmax plus one, since middle triangle is zero
-##            index *= signs.any(axis=1)                  #if we are infact in the middle of all planes; overwrite with zero
-##            faces = faces * 4 + index                   #convert local triangle index to global index according to recursive convention
 
         #calc baries; simple linear bary computation is good enough for these purposes, no?
         baries = np.einsum('ijk,ik->ij', complex.geometry.inverted_triangle[faces], local)
@@ -71,7 +69,6 @@ class Mapping(object):
 
     def inject(self, weights):
         """map weights on curve to d2 form on sphere"""
-        from . import multigrid
         brush = np.zeros(self.complex.shape, np.float)   #brush is d2; it s a conserved quantity
         util.scatter(
             self.raveled_indices,
@@ -122,9 +119,7 @@ class Mapping_d2(object):
     rather than obtaining proper operators for all mesh configurations
     """
     def __init__(self, datamodel, points):
-        """
-        precomputations which are identical for all mappings
-        """
+        """precomputations which are identical for all mappings"""
         self.datamodel = datamodel
         self.hierarchy = self.datamodel.hierarchy
         self.complex   = self.hierarchy[-1]
@@ -133,7 +128,6 @@ class Mapping_d2(object):
         #cache the index a point is in. if it remains unchanged, no need to update
         count = len(points)
         self.index = np.zeros((3, count), np.int8)
-
 
         #precompute subtriangles
         primal = self.complex.geometry.primal[ self.complex.topology.FV]
@@ -154,11 +148,8 @@ class Mapping_d2(object):
 
         self.update(points)
 
-
-
     def update(self, points):
-        """
-        bind a new set of points
+        """bind a new set of points
         presumably, repeatd update calls have coherency that can be exploited
         """
 
@@ -208,19 +199,11 @@ class Mapping_d2(object):
         self.sub_baries /= self.sub_baries.sum(axis=-1)[:, None]
         print self.sub_baries
 
-
-
     def sample_d2(self, field):
-        """
-        sample a d2-form
-        """
-
-
+        """sample a d2-form"""
 
     def sample_velocity(self, velocity_p1):
-        """
-        sample a velocity field
-        """
+        """sample a velocity field"""
         #calc velocity representation on relevant subforms (primal-mid-dual vert)
         velocity_d1 = velocity_p1
         velocity_d2 = None
@@ -262,7 +245,6 @@ def paint(hierarchy, trace, width):
 
     brush = Mapping(hierarchy, positions).inject(weights)
 
-    from . import multigrid
     brush = multigrid.diffuse(hierarchy, brush, width**2)
 
     return complex.P0D2 * brush
