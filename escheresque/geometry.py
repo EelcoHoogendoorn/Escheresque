@@ -56,7 +56,7 @@ class Geometry(object):
         #calc direction orthogonal to normal of intesecting plane
         diff = self.topology.T10 * self.primal
         #collect these on per-tri basis, including weights, so ordering is correct
-        tri_edge = util.grab(self.topology.FEi, diff) * self.topology.FEs[:,:,None]
+        tri_edge = util.gather(self.topology.FEi, diff) * self.topology.FEs[:, :, None]
         #for above, could also do cyclical diff on grab(FV, primal)
         #dual vert les where three mid edge planes intesect
         self.dual = util.normalize(-util.null(tri_edge))
@@ -81,7 +81,7 @@ class Geometry(object):
         this is useful for computing projections on triangles
         adjoint is fine; we normalize coords anyway
         """
-        tri_coords = util.grab(self.topology.FV, self.primal)
+        tri_coords = util.gather(self.topology.FV, self.primal)
         self.inverted_triangle = util.adjoint(tri_coords)
 
 

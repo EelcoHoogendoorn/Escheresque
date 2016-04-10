@@ -166,7 +166,7 @@ class Topology(object):
         position = np.vstack((vertex_vertex, edge_vertex))
 
         #calc subdivision planes
-        central = util.grab(self.FEi, edge_vertex)
+        central = util.gather(self.FEi, edge_vertex)
         planes  = util.adjoint(central)
 
         return position, planes

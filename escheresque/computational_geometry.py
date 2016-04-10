@@ -23,11 +23,10 @@ from itertools import izip
 
 import numpy as np
 import numpy_indexed as npi
-
 from scipy.spatial import cKDTree as KDTree
+import scipy.sparse
 
 from escheresque import util
-
 
 
 def merge_geometry(points, idx=None):
@@ -131,19 +130,13 @@ def refine_curve(points, curve_p, curve_idx):
     normal = util.normalize(np.cross(cp[:,0], cp[:,1]))
     mid    = util.normalize(cp.sum(axis=1))
     diff   = np.diff(cp, axis=1)[:,0,:]
-    radius = np.linalg.norm(axis=1) / 2
+    radius = np.linalg.norm(diff, axis=1) / 2
 
     def insertion_point(e, c):
         """calculate insertion point"""
         coeff = np.dot( np.linalg.pinv(cp[e].T), allpoints[c])
         coeff = coeff / coeff.sum()
         return coeff[0], np.dot(cp[e].T, coeff)
-##        n = normal[e]
-##        p = allpoints[c]
-##        newp = p - n * np.dot(p,n)
-##        delta = diff[e]
-##        d = np.dot(delta, newp-cp[e,0]) / np.dot(delta, delta)
-##        return d, newp #/ np.linalg.norm(newp)
 
     #build new curves
     _curve_p = [c for c in curve_p]
@@ -234,83 +227,32 @@ def order_edges(edges):
 
 
 def partition(points, triangles, curve):
-    """
-    triangles is a list of vertex-index triples
-    curve is an index array of vertex-doublets
+    """partition the connected component, seperated by the cutting curves
 
-    the triangles and curve need to be consistent; that is, any two adjecent curve points do need to be connected by two tris
-    and the triangulation needs to be closed; no open edges
+    points : ndarray, [n_points, 3], float
+    triangles : ndarray, [n_tris, 3], int
+    curve : ndarray, [n_edges, 2], int
 
-    returned is a list of triangle arrays, as partitioned by the curve
-
-    brute force floodfillling dominates for larger meshes; this is the only O(N^2) step;
-    and apparently N is big enough to make it noticable
-    we may also use np.maximum.at type functionality, no?
-    this may be more efficient, especially on a sparse vector
-    work with a subset of sparse elements?
-    need a way to efficiently update the active set
-    expand by newly updated idx
-    from expanded set, trim those that didnt change
-    or do pointer based method?
-    multigrid-type method would be ideal
-    iterate a few steps, then find subgraphs by building dict of pairs
+    returned is a list of (point, triangles) tuples, denoting the partitions
     """
     print 'partitioning mesh'
 
-    #construct edge information
+    # get edges with consistent ordering
+    ordered_edges = order_edges(triangle_edges(triangles))
+    ordered_curve = order_edges(curve)
 
-    unique, inverse = npi.unique(
-        order_edges(triangle_edges(triangles)),
-        return_inverse = True)
+    # construct full incidence matrix
+    unique_edges, edge_indices = npi.unique(ordered_edges, return_inverse=True)
+    face_indices = np.arange(triangles.size) // 3
+    incidence = scipy.sparse.csr_matrix((np.ones_like(edge_indices), (edge_indices, face_indices)))
 
-    FE =            inverse .reshape(-1,3)
-    EF = np.argsort(inverse).reshape(-1,2) // 3   #this gives incidence relations
+    # filter out the curve edges
+    incidence = incidence[~npi.contains(ordered_curve, unique_edges)]
 
-    #determine which edges are curve edges
-    # curve_edges = np.searchsorted(unique, label_edges(curve))
-    curve_edges = npi.indices(unique, order_edges(curve))
-
-
-    if True:
-        def associative_floodfill():
-            """
-            not optimally efficient, but at least should run in linear time
-            """
-            curve_edges_set = set(curve_edges)
-            unused = set(np.arange(len(FE)))
-            used = set()
-            parts = []
-            while len(unused):
-                active = set([unused.pop()])
-                part   = set(active)
-                while len(active):
-                    edges  = set(FE[list(active)].flatten()).difference(curve_edges_set)
-                    active = set(EF[list(edges )].flatten()).difference(part)
-                    part = part.union(active)
-                parts.append(part)
-                print 'part found'
-                unused = unused.difference(part)
-            return parts
-
-        partitions = [squeeze_geometry(points, triangles[list(p)]) for p in associative_floodfill()]
-    else:
-        """
-        floodfill, respecting boundaries. numerically robust and fast way to do segmentation (as opposed to point-in-poly tests)
-        however, this version has superlinear time complexity
-        """
-        tri_labels = np.arange(len(triangles), dtype=np.int32)
-        while True:
-            edge_labels = tri_labels[EF].max(axis=1)
-            edge_labels[curve_edges] = 0                    #halt propagation at boundary
-            new_labels = edge_labels[FE].max(axis=1)
-            print np.count_nonzero(new_labels!=tri_labels)
-            if np.alltrue(new_labels==tri_labels): break    #convergence condition
-            tri_labels = new_labels
-
-        #return triangle array, split in seperate arrays
-        partitions = [squeeze_geometry(points, triangles[tri_labels==l]) for l in np.unique(tri_labels)]
-
-    return sorted(partitions, key=lambda p:len(p[0]))
+    # find and split connected components
+    n_components, labels = scipy.sparse.csgraph.connected_components(incidence.T * incidence)
+    partitions = [squeeze_geometry(points, triangles[labels==l]) for l in range(n_components)]
+    return sorted(partitions, key=lambda p: len(p[0]))
 
 
 def extrude(points, triangles, outer, inner):
@@ -469,6 +411,6 @@ if __name__=='__main__':
             mlab.triangular_mesh(x,y,z, solid_triangles, color = (0,0,0), representation='wireframe')
 
             import stl
-            stl.save_STL(filename.format(i), util.grab(solid_triangles,solid_points))
+            stl.save_STL(filename.format(i), util.gather(solid_triangles, solid_points))
         mlab.show()
     quit()

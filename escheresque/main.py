@@ -113,14 +113,14 @@ def run():
         ##        from icosahedral import ChiralIcosahedral as Group
         ##        from icosahedral import Icosahedral as Group
         dm = DataModel(Group())
-##        dm.generate(6)
+        # dm.generate(6)
     else:
         path = r'C:\Users\Eelco\Dropbox\Git\Escheresque\data'
         filename = 'turtles.sch'
 ##        filename = 'angles_and_demons.sch'
 
         dm = DataModel.load(os.path.join(path, filename))
-        dm.regenerate(5)
+        # dm.regenerate(5)
 
 
 

@@ -182,11 +182,14 @@ class Point(object):
     """
     def __init__(self, datamodel, bary, domain, constraint = None):
         self.datamodel = datamodel
-        self.group = datamodel.group
         self.domain = domain                #domain subtile; tile, orientation, rotation
         self.constraint = constraint        #tuple of bool pmd or none
         self.bary = self.normalize(np.array(bary, np.float))
         self.radius = 1
+
+    @property
+    def group(self):
+        return self.datamodel.group
 
     #access domain properties
     @property
@@ -250,8 +253,6 @@ class Point(object):
         return normalize( np.dot(B, self.bary))
 
 
-    domain = property(get_domain, set_domain)
-
     def get_constraint(self):
         if self.constraint is None:
             return np.ones(3)
@@ -262,8 +263,6 @@ class Point(object):
         """set constraint, and adjust baries accordingly"""
         self.constraint = c
         return self.constrain(self.instantiate()[0,0])
-
-
 
 
 
@@ -302,14 +301,12 @@ class Edge(object):
         #this is a hack... find better way to propagate point radii
         self.curve.radius[0] = self.points[1].radius
         self.curve.radius[-1] = self.points[0].radius
-
         return self.curve.curve()
     def instantiate_cp(self):
         """"returns actual curve data by subdivision?"""
         #this is a hack...
         self.curve.radius[0] = self.points[1].radius
         self.curve.radius[-1] = self.points[0].radius
-
         return self.curve.controlpoints()
 
     @property

@@ -5,14 +5,10 @@ various utility functions
 """
 import numpy as np
 
-
 from scipy.sparse import coo_matrix, csr_matrix, dia_matrix
 
 
 
-def grab(idx, vals):
-    """return vals[idx]. return.shape = idx.shape + vals.shape[1:]"""
-    return vals[idx]
 def gather(idx, vals):
     """return vals[idx]. return.shape = idx.shape + vals.shape[1:]"""
     return vals[idx]
