@@ -7,10 +7,13 @@ import numpy as np
 
 from escheresque import util
 import numpy_indexed as npi
+from escheresque.computational_geometry import Mesh
 
 
-def save_STL(filename, P):
+def save_STL(filename, mesh):
     """save a triangles x vertex3 x dim3 array to plain stl. vertex ordering is assumed to be correct"""
+    P = mesh.vertices[mesh.triangles]
+
     header      = np.zeros(80, '<c')
     triangles   = np.array(len(P), '<u4')
     dtype       = [('normal', '<f4', 3,),('vertex', '<f4', (3,3)), ('abc', '<u2', 1,)]      #use struct array for memory layout
@@ -37,7 +40,7 @@ def load_stl(filename):
         data      = np.fromfile(fh, dtype, triangles)
 
     vertices, triangles = npi.unique(data['vertex'].reshape(-1, 3), return_inverse=True)
-    return vertices, triangles.reshape(-1, 3)
+    return Mesh(vertices, triangles.reshape(-1, 3))
 
 
 

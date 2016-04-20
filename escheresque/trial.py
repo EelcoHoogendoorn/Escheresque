@@ -17,7 +17,7 @@ print(vertices.shape)
 print(triangles.shape)
 assert cg.is_orientated(triangles)
 
-if False:
+def plot(vertices, triangles):
     q = vertices.mean(axis=0)
     x, y, z = (vertices+q/4).T
     mlab.triangular_mesh(x, y, z, triangles)
@@ -42,7 +42,22 @@ print(decimater.decimate(1000))
 print(decimater.decimate_to_faces(10000))
 
 # mesh = decimater.mesh()       # no such method available!
+fh = list(mesh.faces())[0]
+print(dir(fh))
 
+mesh.garbage_collection()
 print(mesh.n_vertices())
 print(mesh.n_faces())
-print(dir(decimater))
+
+print(dir(mesh))
+
+fh = list(mesh.faces())[0]
+print([fh.idx() for fh in mesh.faces()][-20:])
+print(dir(fh))
+quit()
+
+vertices = np.array([list(mesh.point(vh)) for vh in mesh.vertices()])
+faces = np.array([mesh.face(fh) for fh in mesh.faces()])
+print(vertices)
+print(faces)
+plot(vertices, faces)

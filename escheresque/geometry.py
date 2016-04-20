@@ -8,6 +8,7 @@ primal-dual transfer operators, as well as the multigrid transfer operators
 """
 
 import numpy as np
+import numpy_indexed as npi
 from escheresque import util
 
 
@@ -323,8 +324,24 @@ class Geometry(object):
 ##    def interpolate_d2(self, x):
 ##        return (self.transfer.T * x) / self.fine_area[:,None]
 
+    def generate_vertices(self, group):
+        """instantiate a full sphere by repeating the transformed fundamental domain
 
+        Returns
+        -------
+        ndarray, [n, 3], float
+            all points in the geometry, on a unit sphere
+        """
+        points = np.empty((group.index, group.order, self.topology.P0, 3), np.float)
+        PP = self.decomposed
+        for i, B in enumerate(group.basis):
+            for t, b in enumerate(B.reshape(-1, 3, 3)):
+                b = util.normalize(b.T).T  # now every row is a normalized vertex
+                P = np.dot(b, PP.T).T  # go from decomposed coords to local coordinate system
+                points[i, t] = P
 
+        # make single unique point list
+        return npi.unique(points.reshape(-1, 3))
 
 
 from escheresque import topology

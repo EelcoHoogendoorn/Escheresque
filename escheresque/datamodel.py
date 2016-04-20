@@ -22,6 +22,7 @@ from escheresque import multicomplex
 from escheresque import brushes
 from escheresque import poisson
 from escheresque import computational_geometry
+from escheresque.computational_geometry import Curve
 
 
 class DataModel(object):
@@ -124,35 +125,15 @@ class DataModel(object):
         complex = hierarchy[-1]
 
         #concat all curves
-        curve_p   = [transform for e in self.edges if e.boundary for mirrors in e.instantiate() for transform in mirrors]
-        offset    = np.cumsum([len(p) for p in curve_p])
-        curve_idx = [np.arange(o-len(p), o) for p,o in zip( curve_p, offset)]
-        curve_idx = [np.vstack((i[:-1], i[1:])).T for i in curve_idx]
-        curve_p   = np.vstack(curve_p)
-        curve_idx = np.vstack(curve_idx)
-
-        curve_p, curve_idx = computational_geometry.merge_geometry(curve_p, curve_idx)
+        curve = [Curve(transform) for e in self.edges if e.boundary for mirrors in e.instantiate() for transform in mirrors]
+        curve = reduce(lambda x,y: x.merge(y), curve)
 
         #instantiate a geometry
-        geometry = complex.geometry
-        group = self.group
-        points        = np.empty((group.index, group.order, geometry.topology.P0, 3), np.float)
-        PP = geometry.decomposed        #hide this sort of thing behind instantion function
-        for i,B in enumerate(group.basis):
-            for t, b in enumerate(B.reshape(-1,3,3)):
-                b = normalize(b.T).T                      #now every row is a normalized vertex
-                P = np.dot(b, PP.T).T                      #go from decomposed coords to local coordinate system
-                points[i,t] = P
-
-        #make single unique point list
-        points = computational_geometry.merge_geometry(points.reshape(-1, 3))
-
-        #triangulate
-        allpoints, triangles, curve_p, curve_idx = computational_geometry.triangulate(points, curve_p, curve_idx)
-        #get partitions
-        partitions = computational_geometry.partition(allpoints, triangles, curve_idx)
-
-        return partitions
+        vertices = complex.geometry.generate_vertices(self.group)
+        # triangulate
+        mesh, curve = computational_geometry.triangulate(vertices, curve)
+        # return partitions
+        return mesh.partition(curve)
 
 
     def sample(self, points):
