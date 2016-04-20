@@ -1,11 +1,10 @@
-"""
-geometry classes
-take topology object, plus a set of triangle coordinates,
-to compute metric properties on the sphere
+"""geometry class
 
-these are the primal-dual transfer operators, as well as the multigrid transfer operators
+The geometry class combined the topology of a single fundamental triangle,
+with a set of coordinates for the primal vertices
 
-
+From this, metric properties on the sphere are computed, such as the
+primal-dual transfer operators, as well as the multigrid transfer operators
 """
 
 import numpy as np
@@ -13,25 +12,72 @@ from escheresque import util
 
 
 def edge_length(*edge):
-    """assumes a pair of noramlized Vx3 matrices"""
+    """compute spherical edge length.
+
+    Parameters
+    ----------
+    edge : 2 x ndarray, [n, 3], float
+        arc segments described by their start and end position
+
+    Returns
+    -------
+    lengths: ndarray, [n], float
+        length along the unit sphere of each segment
+    """
     return np.arccos(util.dot(*edge))
 
 def triangle_area_from_normals(*edge_planes):
-    """3 x [nx3] edge normal vectors"""
+    """compute spherical area from triplet of great circles
+
+    Parameters
+    ----------
+    edge_planes : 3 x ndarray, [n, 3], float
+        edge normal vectors of great circles
+
+    Returns
+    -------
+    areas : ndarray, [n], float
+        spherical area enclosed by the input planes
+    """
     edge_planes = [util.normalize(ep) for ep in edge_planes ]
     angles      = [util.dot(edge_planes[p-2], edge_planes[p-1]) for p in xrange(3)] #a3 x [faces, c3]
     areas       = sum(np.arccos(-a) for a in angles) - np.pi                        #faces
     return areas
 
 def triangle_area_from_corners(*tri):
-    """3 x [nx3] triangle point arrays"""
+    """compute spherical area from triplet of triangle corners
+
+    Parameters
+    ----------
+    tri : 3 x ndarray, [n, 3], float
+        corners of each triangle
+
+    Returns
+    -------
+    areas : ndarray, [n], float
+        spherical area enclosed by the input corners
+    """
     return triangle_area_from_normals(*[np.cross(tri[v-2], tri[v-1]) for v in xrange(3)])
 
 def triangle_areas_around_center(center, corners):
+    """given a triangle formed by corners, and its dual point center,
+    compute spherical area of the voronoi faces
+
+    Parameters
+    ----------
+    center : ndarray, [..., 3], float
+    corners : ndarray, [..., 3, 3], float
+
+    Returns
+    -------
+    areas : ndarray, [..., 3], float
+        spherical area opposite to each corner
+    """
     areas = np.empty(corners.shape[:-1])
     for i in xrange(3):
-        areas[:,:,i] = triangle_area_from_corners(center, corners[:,:,i-2], corners[:,:,i-1])
-    return (areas.sum(axis=2)[:,:,None]-areas) / 2  #swivel equilaterals to vonoroi parts
+        areas[...,i] = triangle_area_from_corners(center, corners[...,i-2], corners[...,i-1])
+    #swivel equilaterals to vonoroi parts
+    return (areas.sum(axis=2, keepdims=True) - areas) / 2
 
 
 class Geometry(object):

@@ -29,6 +29,75 @@ import scipy.sparse
 from escheresque import util
 
 
+class Mesh(object):
+    def __init__(self, vertices, triangles):
+        assert self.vertices.shape[1] == 3
+        assert self.triangles.shape[1] == 3
+
+        self.vertices = vertices
+        self.triangles = triangles
+
+    def merge(self, other):
+        vertices = np.concatenate([self.vertices, other.vertices], axis=0)
+        triangles = np.concatenate([self.triangles, other.triangles], axis=0)
+        _, _idx, _inv = npi.unique(vertices, return_index=True, return_inverse=True)
+        return Mesh(vertices[_idx], _inv[triangles])
+
+    def squeeze(self):
+        active, inv = np.unique(self.triangles, return_inverse=True)
+        return Mesh(self.vertices[active], inv.reshape(self.triangles.shape))
+
+    def edges(self):
+        """construct 3 edges for each triangle"""
+        edges = self.triangles[:, [[1, 2], [2, 0], [0, 1]]]
+        return edges.reshape(-1, 2)
+
+    @staticmethod
+    def order_edges(edges):
+        return np.where((edges[:, 0] < edges[:, 1])[:, None], edges[:, ::+1], edges[:, ::-1])
+
+    def ordered_edges(self):
+        return self.order_edges(self.edges())
+
+    def compute_face_incidence(self):
+        # get edges with consistent ordering
+        ordered_edges = self.ordered_edges()
+
+        # construct full incidence matrix
+        unique_edges, edge_indices = npi.unique(ordered_edges, return_inverse=True)
+        face_indices = np.arange(self.triangles.size) // 3
+        incidence = scipy.sparse.csr_matrix((np.ones_like(edge_indices), (edge_indices, face_indices)))
+        return incidence, unique_edges
+
+    def is_orientated(self):
+        return npi.all_unique(self.edges())
+
+    def boundary(self):
+        edges = self.edges()
+        return edges[npi.multiplicity(self.order_edges(edges)) == 1]
+
+    def partition(self, curve):
+        """partition the connected component, seperated by the cutting curves
+
+        curve : ndarray, [n_edges, 2], int
+
+        returned is a list of (point, triangles) tuples, denoting the partitions
+        """
+        # get edges with consistent ordering
+        ordered_curve = self.order_edges(curve)
+
+        incidence, unique_edges = self.compute_face_incidence()
+
+        # filter out the curve edges
+        incidence = incidence[~npi.contains(ordered_curve, unique_edges)]
+        adjecency = incidence.T * incidence
+        # find and split connected components
+        n_components, labels = scipy.sparse.csgraph.connected_components(adjecency)
+        partitions = [self.triangles[labels == l] for l in range(n_components)]
+        partitions = [Mesh(self.vertices, triangles).squeeze() for triangles in partitions]
+        return sorted(partitions, key=lambda m: len(m.vertices))
+
+
 def merge_geometry(points, idx=None):
     """marge identical points in an NxM point array, reducing an indiex array into the point array at the same time"""
     _, _idx, _inv = npi.unique(points, return_index=True, return_inverse=True)
@@ -222,6 +291,22 @@ def order_edges(edges):
     return np.where((edges[:,0]<edges[:,1])[:,None], edges[:,::+1], edges[:,::-1])
 
 
+def compute_face_incidence(triangles):
+    # get edges with consistent ordering
+    ordered_edges = order_edges(triangle_edges(triangles))
+
+    # construct full incidence matrix
+    unique_edges, edge_indices = npi.unique(ordered_edges, return_inverse=True)
+    face_indices = np.arange(triangles.size) // 3
+    incidence = scipy.sparse.csr_matrix((np.ones_like(edge_indices), (edge_indices, face_indices)))
+    return incidence, unique_edges
+
+
+def is_orientated(triangles):
+    edges = triangle_edges(triangles)
+    return npi.all_unique(edges)
+
+
 def partition(points, triangles, curve):
     """partition the connected component, seperated by the cutting curves
 
@@ -234,13 +319,9 @@ def partition(points, triangles, curve):
     print 'partitioning mesh'
 
     # get edges with consistent ordering
-    ordered_edges = order_edges(triangle_edges(triangles))
     ordered_curve = order_edges(curve)
 
-    # construct full incidence matrix
-    unique_edges, edge_indices = npi.unique(ordered_edges, return_inverse=True)
-    face_indices = np.arange(triangles.size) // 3
-    incidence = scipy.sparse.csr_matrix((np.ones_like(edge_indices), (edge_indices, face_indices)))
+    incidence, unique_edges = compute_face_incidence(triangles)
 
     # filter out the curve edges
     incidence = incidence[~npi.contains(ordered_curve, unique_edges)]
@@ -261,9 +342,9 @@ def extrude(outer, inner, triangles):
     points = len(outer)
 
     #construct edge information
-    tri_edges = triangle_edges(triangles)       #nx2 pairs of indices
+    tri_edges = triangle_edges(triangles)      #nx2 pairs of indices
 
-    boundary = npi.multiplicity(tri_edges) == 1
+    boundary = npi.multiplicity(order_edges(tri_edges)) == 1
     eb = tri_edges[boundary]
     if len(eb) == 0: raise Exception('Surface to be extruded is closed, thus does not have a boundary')
 
@@ -337,8 +418,10 @@ if __name__=='__main__':
             p = p * datamodel.sample(p)[:, None]
             thickness = 0.03
             p, t = swept_extrude(p, t, thickness)
-
+            assert is_orientated(t)
             stl.save_STL(filename.format(i), p[t])
+            break
+
 
 
         q = p.mean(axis=0)
