@@ -1,7 +1,5 @@
 """
 stl handling module
-
-and stl load module?
 """
 import numpy as np
 
@@ -13,7 +11,7 @@ from escheresque.computational_geometry import Mesh
 def save_STL(filename, mesh):
     """save a mesh to plain stl. vertex ordering is assumed to be correct"""
     header      = np.zeros(80, '<c')
-    triangles   = np.array(len(mesh.vertices), '<u4')
+    triangles   = np.array(len(mesh.faces), '<u4')
     dtype       = [('normal', '<f4', 3,),('vertex', '<f4', (3,3)), ('abc', '<u2', 1,)]
     data        = np.empty(triangles, dtype)
 
@@ -26,11 +24,9 @@ def save_STL(filename, mesh):
         triangles.tofile(fh)
         data.     tofile(fh)
 
-    print 'saved {t} triangles to plain STL'.format(t=triangles)
-
 
 def load_stl(filename):
-    dtype       = [('normal', '<f4', 3,),('vertex', '<f4', (3,3)), ('abc', '<u2', 1,)]      #use struct array for memory layout
+    dtype       = [('normal', '<f4', 3,),('vertex', '<f4', (3,3)), ('abc', '<u2', 1,)]
 
     with open(filename, 'rb') as fh:
         header    = np.fromfile(fh, '<c', 80)
@@ -81,34 +77,6 @@ def save_OFF(filename, vertices, triangles):
         counts.tofile(fh)
         vertices.tofile(fh)
         faces.tofile(fh)
-
-
-def to_cgal():
-    from CGAL.CGAL_Polyhedron_3 import Polyhedron_modifier
-    from CGAL.CGAL_Polyhedron_3 import Polyhedron_3
-    from CGAL.CGAL_Polyhedron_3 import ABSOLUTE_INDEXING
-    from CGAL.CGAL_Kernel import Point_3
-
-    # declare a modifier interfacing the incremental_builder
-    m = Polyhedron_modifier()
-    m.begin_surface(len(p), len(t))
-    for point in p.astype(np.float64):
-        m.add_vertex(Point_3(*point))
-    for triangle in t:
-        m.begin_facet()
-        for i in triangle:
-            m.add_vertex_to_facet(i)
-        m.end_facet()
-    m.end_surface()
-    P = Polyhedron_3()
-    P.delegate(m)
-
-    # FIXME: need a lib where this works
-    import CGAL.CGAL_Polygon_mesh_processing
-
-    flist = [fh for fh in P.facets()]
-    CGAL.CGAL_Polygon_mesh_processing.isotropic_remeshing(flist, 0.25, P)
-
 
 
 

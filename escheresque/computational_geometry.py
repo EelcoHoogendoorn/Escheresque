@@ -345,6 +345,33 @@ class Mesh(PolyData):
         centroids = self.vertices[self.faces].mean(axis=1)
         return (self.face_normals() * centroids).sum() / 3
 
+    def to_cgal(self):
+        from CGAL.CGAL_Polyhedron_3 import Polyhedron_modifier
+        from CGAL.CGAL_Polyhedron_3 import Polyhedron_3
+        from CGAL.CGAL_Polyhedron_3 import ABSOLUTE_INDEXING
+        from CGAL.CGAL_Kernel import Point_3
+
+        # declare a modifier interfacing the incremental_builder
+        m = Polyhedron_modifier()
+        m.begin_surface(len(self.faces), len(self.triangles))
+        for vertex in self.vertices.astype(np.float64):
+            m.add_vertex(Point_3(*vertex))
+        for face in self.faces:
+            m.begin_facet()
+            for vertex in face:
+                m.add_vertex_to_facet(vertex)
+            m.end_facet()
+        m.end_surface()
+        P = Polyhedron_3()
+        P.delegate(m)
+
+        # FIXME: need a lib where this works
+        import CGAL.CGAL_Polygon_mesh_processing
+
+        flist = [fh for fh in P.facets()]
+        CGAL.CGAL_Polygon_mesh_processing.isotropic_remeshing(flist, 0.25, P)
+
+
 
 
 def triangulate(points, curve):
