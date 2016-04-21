@@ -115,7 +115,7 @@ def run():
         dm = DataModel(Group())
         # dm.generate(6)
     else:
-        path = r'C:\Users\Eelco\Dropbox\Git\Escheresque\data'
+        path = r'..\data'
         filename = 'turtles.sch'
 ##        filename = 'angles_and_demons.sch'
 

@@ -11,17 +11,15 @@ from escheresque.computational_geometry import Mesh
 
 
 def save_STL(filename, mesh):
-    """save a triangles x vertex3 x dim3 array to plain stl. vertex ordering is assumed to be correct"""
-    P = mesh.vertices[mesh.faces]
-
+    """save a mesh to plain stl. vertex ordering is assumed to be correct"""
     header      = np.zeros(80, '<c')
-    triangles   = np.array(len(P), '<u4')
-    dtype       = [('normal', '<f4', 3,),('vertex', '<f4', (3,3)), ('abc', '<u2', 1,)]      #use struct array for memory layout
+    triangles   = np.array(len(mesh.vertices), '<u4')
+    dtype       = [('normal', '<f4', 3,),('vertex', '<f4', (3,3)), ('abc', '<u2', 1,)]
     data        = np.empty(triangles, dtype)
 
     data['abc']    = 0     #standard stl cruft
-    data['vertex'] = P
-    data['normal'] = util.normalize(np.cross(P[:,1,:]-P[:,0,:],P[:,2,:]-P[:,0,:]))
+    data['vertex'] = mesh.vertices[mesh.faces]
+    data['normal'] = util.normalize(mesh.face_normals())
 
     with open(filename, 'wb') as fh:
         header.   tofile(fh)

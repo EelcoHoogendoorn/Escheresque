@@ -289,7 +289,10 @@ class Mesh(PolyData):
         solid_points = np.concatenate((self.vertices, displaced))
         solid_tris   = np.concatenate((self.faces, copy_tris, boundary_tris))
 
-        return Mesh(solid_points, solid_tris)
+        mesh = Mesh(solid_points, solid_tris)
+        if mesh.volume() < 0:
+            mesh.faces = mesh.faces[:, ::-1]
+        return mesh
 
     def to_openmesh(self):
         mesh = openmesh.TriMesh()
@@ -321,7 +324,10 @@ class Mesh(PolyData):
             mesh.garbage_collection()
         dec()
 
-        return Mesh.from_openmesh(mesh)
+        mesh = Mesh.from_openmesh(mesh)
+        if mesh.volume() < 0:
+            mesh.faces = mesh.faces[:, ::-1]
+        return mesh
 
     def plot(self):
         from mayavi import mlab
@@ -331,6 +337,13 @@ class Mesh(PolyData):
         # mlab.triangular_mesh(x, y, z, t, color=(0, 0, 0), representation='wireframe')
         mlab.show()
 
+    def face_normals(self):
+        edges = np.diff(self.vertices[self.faces], axis=1)
+        return np.cross(edges[:, 1], edges[:, 0]) / 2
+
+    def volume(self):
+        centroids = self.vertices[self.faces].mean(axis=1)
+        return (self.face_normals() * centroids).sum() / 3
 
 
 
@@ -408,7 +421,7 @@ if __name__=='__main__':
 
         for i, mesh in enumerate(partitions):
             mesh.vertices *= datamodel.sample(mesh.vertices)[:, None]
-            thickness = 0.07
+            thickness = 0.03
             mesh = mesh.swept_extrude(thickness)
             assert mesh.is_orientated()
             stl.save_STL(filename.format(i), mesh)
