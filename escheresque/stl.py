@@ -12,7 +12,7 @@ from escheresque.computational_geometry import Mesh
 
 def save_STL(filename, mesh):
     """save a triangles x vertex3 x dim3 array to plain stl. vertex ordering is assumed to be correct"""
-    P = mesh.vertices[mesh.triangles]
+    P = mesh.vertices[mesh.faces]
 
     header      = np.zeros(80, '<c')
     triangles   = np.array(len(P), '<u4')

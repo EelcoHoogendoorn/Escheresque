@@ -26,6 +26,7 @@ import numpy_indexed as npi
 from scipy.spatial import cKDTree as KDTree
 import scipy.sparse
 import scipy.spatial
+import openmesh
 
 from escheresque import util
 
@@ -41,6 +42,10 @@ class PolyData(object):
         """compact geometry description, removing unused vertices, and adjusting faces accordingly"""
         active, inv = np.unique(self.faces, return_inverse=True)
         return type(self)(self.vertices[active], inv.reshape(self.faces.shape))
+
+    @staticmethod
+    def order_edges(edges):
+        return np.where((edges[:, 0] < edges[:, 1])[:, None], edges[:, ::+1], edges[:, ::-1])
 
 
 class Curve(PolyData):
@@ -139,7 +144,7 @@ class Curve(PolyData):
 
     def trim(self, points, radius):
         """
-        remove points too close to the cut curve. they dont add anything, and only lead to awkward triangles
+        remove points too close to the cut curve. they dont add anything, and only lead to awkward faces
         """
         #some precomputations
         tree   = KDTree(points)
@@ -165,32 +170,21 @@ class Curve(PolyData):
         return points[index]
 
 
-class Mesh(object):
-    def __init__(self, vertices, triangles):
+class Mesh(PolyData):
+    def __init__(self, vertices, faces):
+        vertices = np.asarray(vertices)
+        faces = np.asarray(faces)
+
         assert vertices.shape[1] == 3
-        assert triangles.shape[1] == 3
+        assert faces.shape[1] == 3
 
         self.vertices = vertices
-        self.triangles = triangles
-
-    def merge(self, other):
-        vertices = np.concatenate([self.vertices, other.vertices], axis=0)
-        triangles = np.concatenate([self.triangles, other.triangles + len(self.vertices)], axis=0)
-        _, _idx, _inv = npi.unique(vertices, return_index=True, return_inverse=True)
-        return Mesh(vertices[_idx], _inv[triangles])
-
-    def squeeze(self):
-        active, inv = np.unique(self.triangles, return_inverse=True)
-        return Mesh(self.vertices[active], inv.reshape(self.triangles.shape))
+        self.faces = faces
 
     def edges(self):
         """construct 3 edges for each triangle"""
-        edges = self.triangles[:, [[1, 2], [2, 0], [0, 1]]]
+        edges = self.faces[:, [[1, 2], [2, 0], [0, 1]]]
         return edges.reshape(-1, 2)
-
-    @staticmethod
-    def order_edges(edges):
-        return np.where((edges[:, 0] < edges[:, 1])[:, None], edges[:, ::+1], edges[:, ::-1])
 
     def ordered_edges(self):
         return self.order_edges(self.edges())
@@ -201,7 +195,7 @@ class Mesh(object):
 
         # construct full incidence matrix
         unique_edges, edge_indices = npi.unique(ordered_edges, return_inverse=True)
-        face_indices = np.arange(self.triangles.size) // 3
+        face_indices = np.arange(self.faces.size) // 3
         incidence = scipy.sparse.csr_matrix((np.ones_like(edge_indices), (edge_indices, face_indices)))
         return incidence, unique_edges
 
@@ -217,7 +211,7 @@ class Mesh(object):
 
         curve : ndarray, [n_edges, 2], int
 
-        returned is a list of (point, triangles) tuples, denoting the partitions
+        returned is a list of (point, faces) tuples, denoting the partitions
         """
         # get edges with consistent ordering
         ordered_curve = self.order_edges(curve.faces)
@@ -229,7 +223,7 @@ class Mesh(object):
         adjecency = incidence.T * incidence
         # find and split connected components
         n_components, labels = scipy.sparse.csgraph.connected_components(adjecency)
-        partitions = [self.triangles[labels == l] for l in range(n_components)]
+        partitions = [self.faces[labels == l] for l in range(n_components)]
         partitions = [Mesh(self.vertices, triangles).squeeze() for triangles in partitions]
         return sorted(partitions, key=lambda m: len(m.vertices))
 
@@ -290,12 +284,52 @@ class Mesh(object):
             np.concatenate((eb[:,::+1]+points, eb[:,1:2]),axis=1)
         ))
 
-        copy_tris = self.triangles[:,::-1] + points
+        copy_tris = self.faces[:, ::-1] + points
 
         solid_points = np.concatenate((self.vertices, displaced))
-        solid_tris   = np.concatenate((self.triangles, copy_tris, boundary_tris))
+        solid_tris   = np.concatenate((self.faces, copy_tris, boundary_tris))
 
         return Mesh(solid_points, solid_tris)
+
+    def to_openmesh(self):
+        mesh = openmesh.TriMesh()
+        vhs = [mesh.add_vertex(openmesh.TriMesh.Point(*vertex)) for vertex in self.vertices.astype(np.float64)]
+
+        for triangle in self.faces:
+            mesh.add_face([vhs[v] for v in triangle])
+        return mesh
+
+    @staticmethod
+    def from_openmesh(mesh):
+        vertices = [list(mesh.point(vh)) for vh in mesh.vertices()]
+        faces = [[v.idx() for v in mesh.fv(fh)] for fh in mesh.faces()]
+        return Mesh(vertices, faces)
+
+    def decimate(self, n_faces):
+        mesh = self.to_openmesh()
+
+        decimater = openmesh.TriMeshDecimater(mesh)
+        modquadrichandle = openmesh.TriMeshModQuadricHandle()
+        decimater.add(modquadrichandle)
+
+        decimater.initialize()
+        # print(decimater.decimate(1000))
+        decimater.decimate_to_faces(n_faces)
+        mesh.garbage_collection()
+
+        del decimater
+        import gc
+        gc.collect()
+
+        return Mesh.from_openmesh(mesh)
+
+    def plot(self):
+        from mayavi import mlab
+        q = self.vertices.mean(axis=0)
+        x, y, z = (self.vertices + q / 4).T
+        mlab.triangular_mesh(x, y, z, self.faces)
+        # mlab.triangular_mesh(x, y, z, t, color=(0, 0, 0), representation='wireframe')
+        mlab.show()
 
 
 
@@ -340,15 +374,18 @@ def triangulate(points, curve):
     hull = scipy.spatial.ConvexHull(util.normalize(allpoints))
     triangles = hull.simplices
 
-    #order triangles coming from the convex hull
-    print 'ordering triangles'
+    #order faces coming from the convex hull
+    print 'ordering faces'
     FP        = util.gather(triangles, allpoints)
     mid       = FP.sum(axis=1)
     normal    = util.normals(FP)
     sign      = util.dot(normal, mid) > 0
     triangles = np.where(sign[:,None], triangles[:,::+1], triangles[:,::-1])
 
-    return Mesh(allpoints, triangles), curve
+    mesh = Mesh(allpoints, triangles)
+    assert mesh.is_orientated()
+
+    return mesh, curve
 
 
 
@@ -377,12 +414,7 @@ if __name__=='__main__':
             stl.save_STL(filename.format(i), mesh)
             break
 
-
-        q = mesh.vertices.mean(axis=0)
-        x, y, z = mesh.vertices.T + q[:, None] / 4
-        mlab.triangular_mesh(x, y, z, mesh.triangles)
-        # mlab.triangular_mesh(x, y, z, t, color=(0, 0, 0), representation='wireframe')
-        mlab.show()
+        mesh.plot()
         quit()
 
 
