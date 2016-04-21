@@ -308,18 +308,18 @@ class Mesh(PolyData):
     def decimate(self, n_faces):
         mesh = self.to_openmesh()
 
-        decimater = openmesh.TriMeshDecimater(mesh)
-        modquadrichandle = openmesh.TriMeshModQuadricHandle()
-        decimater.add(modquadrichandle)
+        # wrap in inner function so cg of decimater and mesh happens in the right order
+        def dec():
+            decimater = openmesh.TriMeshDecimater(mesh)
+            decimater.add(openmesh.TriMeshModQuadricHandle())
+            # decimater.add(openmesh.TriMeshModAspectRatioHandle())
+            decimater.add(openmesh.TriMeshModEdgeLengthHandle())
 
-        decimater.initialize()
-        # print(decimater.decimate(1000))
-        decimater.decimate_to_faces(n_faces)
-        mesh.garbage_collection()
-
-        del decimater
-        import gc
-        gc.collect()
+            decimater.initialize()
+            # print(decimater.decimate(1000))
+            decimater.decimate_to_faces(n_faces)
+            mesh.garbage_collection()
+        dec()
 
         return Mesh.from_openmesh(mesh)
 
@@ -397,14 +397,14 @@ if __name__=='__main__':
         from escheresque import stl, brushes
         import os
 
-        path = r'C:\Users\Eelco\Dropbox\Git\Escheresque\data'
+        path = r'..\data'
         filename = 'turtles.sch'
 
         datamodel = DataModel.load(os.path.join(path, filename))
         # datamodel.generate(5)
         partitions = datamodel.partition()
 
-        filename = r'C:\Users\Eelco\Dropbox\Git\Escheresque\data\part{0}.stl'
+        filename = r'..\data\part{0}.stl'
 
         for i, mesh in enumerate(partitions):
             mesh.vertices *= datamodel.sample(mesh.vertices)[:, None]

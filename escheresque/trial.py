@@ -8,8 +8,12 @@ outer = np.eye(3) + 1
 mesh = cg.Mesh(outer, triangles).extrude(inner)
 assert mesh.is_orientated()
 
-filename = r'C:\Users\Eelco\Dropbox\Git\Escheresque\data\part{0}.stl'
+
+filename = r'..\data\part{0}.stl'
 mesh = escheresque.stl.load_stl(filename.format(0))
+
+mesh.plot()
+
 print(mesh.vertices.shape)
 print(mesh.faces.shape)
 assert mesh.is_orientated()
