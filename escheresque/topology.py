@@ -25,20 +25,6 @@ def sparse_matrix_from_array(index, weight=None):
     return csr_matrix((weight, (index, counter)))
 
 
-##class TransposedLoopup(object):
-##    """
-##    given a datastructure allowing fast boundary lookup, precompute fast incidence lookup information
-##    """
-##    def __init__(self, boundary, elements):
-##        si = np.argsort(boundary.flatten())
-##        self.pivots = np.searchsorted(boundary.flatten()[si], np.arange(elements+1))
-##        I = np.arange(boundary.size) // boundary.shape[1]
-##        self.si = I[si]
-##    def __getitem__(self, ind):
-##        """return an array of incident primitives"""
-##        return self.si[self.pivots[ind]:self.pivots[ind+1]]
-
-
 
 class Topology(object):
     """topology describing a single triangular fundamental domain
