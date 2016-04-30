@@ -100,7 +100,7 @@ def run():
     starting the main thread needs to be isolated from module level,
     to avoid import deadlock issues
     """
-    if True:
+    if False:
         from escheresque.group.tetrahedral import ChiralTetrahedral as Group
         ##        from tetrahedral import Null as Group
         ##        from octahedral import Tetrahedral as Group
