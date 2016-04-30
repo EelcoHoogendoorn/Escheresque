@@ -100,7 +100,7 @@ def run():
     starting the main thread needs to be isolated from module level,
     to avoid import deadlock issues
     """
-    if False:
+    if True:
         from escheresque.group.tetrahedral import ChiralTetrahedral as Group
         ##        from tetrahedral import Null as Group
         ##        from octahedral import Tetrahedral as Group
@@ -110,7 +110,7 @@ def run():
         ##        from octahedral import Tetrahedral as Group
         ##        from octahedral import Origin as Group
         ##        from dihedral import ChiralDihedral as Group
-        ##        from icosahedral import ChiralIcosahedral as Group
+        from escheresque.group.icosahedral import ChiralIcosahedral as Group
         ##        from icosahedral import Icosahedral as Group
         dm = DataModel(Group())
         # dm.generate(6)

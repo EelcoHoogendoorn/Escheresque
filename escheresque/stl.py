@@ -40,6 +40,8 @@ def load_stl(filename):
 
 def save_STL_complete(complex, radius, filename):
     """
+    split this as mesh_from_datamodel
+
     save a mesh to binary STL format
     the number of triangles grows quickly
     shapeway and solidworks tap out at a mere 1M and 20k triangles respectively...

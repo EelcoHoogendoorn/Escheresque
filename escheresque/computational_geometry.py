@@ -25,6 +25,7 @@ import numpy as np
 import numpy_indexed as npi
 from scipy.spatial import cKDTree as KDTree
 import scipy.sparse
+import scipy.sparse.linalg
 import scipy.spatial
 import openmesh
 
@@ -172,8 +173,8 @@ class Curve(PolyData):
 
 class Mesh(PolyData):
     def __init__(self, vertices, faces):
-        vertices = np.asarray(vertices)
-        faces = np.asarray(faces)
+        vertices = np.asarray(vertices, dtype=np.float32)
+        faces = np.asarray(faces, dtype=np.int32)
 
         assert vertices.shape[1] == 3
         assert faces.shape[1] == 3
@@ -190,14 +191,26 @@ class Mesh(PolyData):
         return self.order_edges(self.edges())
 
     def compute_face_incidence(self):
-        # get edges with consistent ordering
-        ordered_edges = self.ordered_edges()
+        unsorted_edges = self.edges().reshape(-1, 2)
+        sorted_edges = np.sort(unsorted_edges, axis=-1)
 
-        # construct full incidence matrix
-        unique_edges, edge_indices = npi.unique(ordered_edges, return_inverse=True)
+        unique_edges, edge_indices = npi.unique(unsorted_edges, return_inverse=True)
         face_indices = np.arange(self.faces.size) // 3
-        incidence = scipy.sparse.csr_matrix((np.ones_like(edge_indices), (edge_indices, face_indices)))
+        orientation = sorted_edges[:, 0] == unsorted_edges[:, 0]
+        incidence = scipy.sparse.csr_matrix((orientation * 2 - 1, (edge_indices, face_indices)))
         return incidence, unique_edges
+
+    def compute_vertex_incidence(self):
+        unsorted_edges = self.edges().reshape(-1, 2)
+        sorted_edges = np.sort(unsorted_edges, axis=-1)
+
+        vertex_indices = npi.unique(sorted_edges)
+        edge_indices = np.arange(vertex_indices.size) // 2
+        orientation = vertex_indices == vertex_indices[:, 0:1]
+
+        incidence = scipy.sparse.csr_matrix(
+            ((orientation * 2 - 1).flatten(), (edge_indices, vertex_indices.flatten())))
+        return incidence
 
     def is_orientated(self):
         return npi.all_unique(self.edges())
@@ -315,8 +328,8 @@ class Mesh(PolyData):
         def dec():
             decimater = openmesh.TriMeshDecimater(mesh)
             decimater.add(openmesh.TriMeshModQuadricHandle())
-            # decimater.add(openmesh.TriMeshModAspectRatioHandle())
-            decimater.add(openmesh.TriMeshModEdgeLengthHandle())
+            decimater.add(openmesh.TriMeshModAspectRatioHandle())
+            # decimater.add(openmesh.TriMeshModEdgeLengthHandle())
 
             decimater.initialize()
             # print(decimater.decimate(1000))
@@ -329,21 +342,38 @@ class Mesh(PolyData):
             mesh.faces = mesh.faces[:, ::-1]
         return mesh
 
-    def plot(self):
+    def plot(self, color=None, facevec=None):
         from mayavi import mlab
-        q = self.vertices.mean(axis=0)
+        q = self.vertices.mean(axis=0) * 0
         x, y, z = (self.vertices + q / 4).T
-        mlab.triangular_mesh(x, y, z, self.faces)
+        mlab.triangular_mesh(x, y, z, self.faces, scalars=color)
         # mlab.triangular_mesh(x, y, z, t, color=(0, 0, 0), representation='wireframe')
+        if facevec is not None:
+            centroids = self.face_centroids()
+            mlab.quiver3d(*np.concatenate([centroids, facevec], axis=1).T)
         mlab.show()
 
     def face_normals(self):
         edges = np.diff(self.vertices[self.faces], axis=1)
         return np.cross(edges[:, 1], edges[:, 0]) / 2
 
+    def vertex_areas(self):
+        """compute area associated with each vertex,
+        whereby each face shares its area equally over all its component vertices
+
+        Returns
+        -------
+        vertex_area : ndarray, [n_vertices], float
+            vertex area per vertex
+        """
+        face_areas = np.linalg.norm(self.face_normals(), axis=-1)
+        areas = np.zeros_like(self.vertices[:, 0])
+        for i in range(3):
+            np.add.at(areas, self.faces[:, i], face_areas)
+        return areas / 3
+
     def volume(self):
-        centroids = self.vertices[self.faces].mean(axis=1)
-        return (self.face_normals() * centroids).sum() / 3
+        return (self.face_normals() * self.face_centroids()).sum() / 3
 
     def to_cgal(self):
         from CGAL.CGAL_Polyhedron_3 import Polyhedron_modifier
@@ -371,8 +401,85 @@ class Mesh(PolyData):
         flist = [fh for fh in P.facets()]
         CGAL.CGAL_Polygon_mesh_processing.isotropic_remeshing(flist, 0.25, P)
 
+    def compute_angles(self):
+        """compute angles for each triangle-vertex"""
+        edges = self.edges().reshape(-1, 3, 2)
+        vecs = np.diff(self.vertices[edges], axis=2)[:, :, 0]
+        vecs = util.normalize(vecs)
+        angles = np.arccos(-util.dot(vecs[:, [1, 2, 0]], vecs[:, [2, 0, 1]]))
+        assert np.allclose(angles.sum(axis=1), np.pi, rtol=1e-3)
+        return angles
 
+    def remap_edges(self, field):
+        """given a quantity computed on each triangle-edge, sum the contributions from each adjecent triangle"""
+        edges = self.edges().reshape(-1, 3, 2)
+        sorted_edges = np.sort(edges, axis=-1)
+        _, field = npi.group_by(sorted_edges.reshape(-1, 2)).sum(field.flatten())
+        return field
 
+    def hodge_edge(self):
+        """compute edge hodge based on cotan formula; corresponds to circumcentric calcs"""
+        cotan = 1 / np.tan(self.compute_angles())
+        return self.remap_edges(cotan) / 2
+
+    def laplacian_vertex(self):
+        """compute cotan/area gradient based laplacian"""
+        hodge = self.hodge_edge()
+        hodge = scipy.sparse.dia_matrix((hodge, 0), shape=(len(hodge),) * 2)
+        incidence = self.compute_vertex_incidence()
+        return incidence.T * hodge * incidence
+
+    def compute_gradient(self, field):
+        """compute gradient of scalar function on vertices on faces"""
+        normals = self.face_normals()
+        face_area = np.linalg.norm(normals, axis=1)
+        normals = util.normalize(normals)
+
+        edges = self.edges().reshape(-1, 3, 2)
+        sorted_edges = np.sort(edges, axis=-1)
+        vecs = np.diff(self.vertices[edges], axis=2)[:, :, 0, :]
+        gradient = (field[self.faces][:, :, None] * np.cross(normals[:, None, :], vecs)).sum(axis=1)
+        return gradient / (2 * face_area[:, None])
+
+    def compute_divergence(self, field):
+        """compute divergence of vector field at faces at vertices"""
+        edges = self.edges().reshape(-1, 3, 2)
+        sorted_edges = np.sort(edges, axis=-1)
+        vecs = np.diff(self.vertices[sorted_edges], axis=2)[:, :, 0, :]
+        inner = util.dot(vecs, field[:, None, :])
+        cotan = 1 / np.tan(self.compute_angles())
+        vertex_incidence = self.compute_vertex_incidence()
+        return vertex_incidence.T * self.remap_edges(inner * cotan) / 2
+
+    def face_centroids(self):
+        return self.vertices[self.faces].mean(axis=1)
+
+    def edge_lengths(self):
+        edges = self.vertices[self.edges()]
+        lengths = np.linalg.norm(edges, axis=2)
+        return self.remap_edges(lengths)
+
+    def geodesic(self, field):
+        """Compute geodesic distance map
+
+        Notes
+        -----
+        http://www.multires.caltech.edu/pubs/GeodesicsInHeat.pdf
+        """
+        laplacian = self.laplacian_vertex()
+        mass = self.vertex_areas()
+        t = self.edge_lengths().mean() ** 2
+        heat = lambda x : mass * x - laplacian * (x * t)
+        operator = scipy.sparse.linalg.LinearOperator(shape=laplacian.shape, matvec=heat)
+        diffused = scipy.sparse.linalg.minres(operator, field)[0]
+        # return diffused
+
+        gradient = -util.normalize(self.compute_gradient(diffused))
+        # self.plot(facevec=gradient)
+        rhs = self.compute_divergence(gradient)
+        phi = scipy.sparse.linalg.minres(laplacian, rhs)[0]
+        phi -= phi.min()
+        return phi
 
 def triangulate(points, curve):
     """
@@ -432,6 +539,7 @@ def triangulate(points, curve):
 if __name__=='__main__':
 
     if True:
+        # load .sch file and export parts to stl
         from escheresque.datamodel import DataModel
         from mayavi import mlab
         from escheresque import stl, brushes
@@ -458,62 +566,3 @@ if __name__=='__main__':
         quit()
 
 
-
-
-
-    #test triangulation
-
-    #random points on the sphere
-    points = util.normalize(np.random.randn(10000,3))
-
-    #build curve. add sharp convex corners, as well as additional cuts
-    N = 267#9
-    radius = np.cos( np.linspace(0,np.pi*2*12,N, False)) +1.1
-    curve = np.array([(np.cos(a)*r,np.sin(a)*r,1) for a,r in izip( np.linspace(0,np.pi*2,N, endpoint=False), radius)])
-    curve = np.append(curve, [[1,0,-4],[-1,0,-4]], axis=0)      #add bottom slit
-    curve = util.normalize(curve)
-#    print curve
-    curve_idx = np.arange(N)
-    curve_idx = np.ascontiguousarray(np.vstack((curve_idx, np.roll(curve_idx, 1))).T)
-#    curve_idx = np.append(curve_idx, [[45,N-45]], axis=0)
-#    curve_idx = np.append(curve_idx, [[N/24+45,N/24-45]], axis=0)
-    curve_idx = np.append(curve_idx, [[N,N+1]], axis=0)
-
-
-
-
-    #do triangulation
-    allpoints, triangles, curve, curve_idx = triangulate(points, curve, curve_idx)
-    #add partitioning of points here too?
-    partitions = partition(triangles, curve_idx)
-
-
-
-
-    if False:
-        from mayavi import mlab
-        for p,c in izip( partitions, [(1,0,0), (0,1,0),(0,0,1),(0,1,1),(1,0,1),(1,1,0)]):
-            x,y,z= allpoints.T
-            mlab.triangular_mesh(x,y,z, p, color = c,       representation='surface')
-            mlab.triangular_mesh(x,y,z, p, color = (0,0,0), representation='wireframe')
-        mlab.show()
-
-
-#    filename = r'C:\Users\Eelco\Dropbox\Escheresque\examples\part{0}.stl'
-    filename = r'C:\Users\Eelco Hoogendoorn\Dropbox\Escheresque\examples\part{0}.stl'
-
-    if True:
-        radius = np.linspace(0.99, 1.01, len(partitions))
-        from mayavi import mlab
-        for i,(p,c) in enumerate(izip( partitions, [(1,0,0), (0,1,0),(0,0,1),(0,1,1),(1,0,1),(1,1,0)])):
-            solid_points, solid_triangles = extrude(allpoints, p, radius[i], 0.8)
-
-            x,y,z= solid_points.T
-
-            mlab.triangular_mesh(x,y,z, solid_triangles, color = c,       representation='surface')
-            mlab.triangular_mesh(x,y,z, solid_triangles, color = (0,0,0), representation='wireframe')
-
-            import stl
-            stl.save_STL(filename.format(i), util.gather(solid_triangles, solid_points))
-        mlab.show()
-    quit()

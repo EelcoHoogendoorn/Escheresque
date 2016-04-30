@@ -58,6 +58,7 @@ def dot(A, B):
 def normalize(listofvec):
     """normalize an array of vecs"""
     norm = np.sqrt(dot(listofvec, listofvec))
+    norm[norm==0] = 1
     return listofvec / np.expand_dims( norm, -1)
 
 

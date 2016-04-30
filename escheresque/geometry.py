@@ -76,9 +76,9 @@ def triangle_areas_around_center(center, corners):
     """
     areas = np.empty(corners.shape[:-1])
     for i in xrange(3):
-        areas[...,i] = triangle_area_from_corners(center, corners[...,i-2], corners[...,i-1])
+        areas[:,:,i] = triangle_area_from_corners(center, corners[:,:,i-2], corners[:,:,i-1])
     #swivel equilaterals to vonoroi parts
-    return (areas.sum(axis=2, keepdims=True) - areas) / 2
+    return (areas.sum(axis=2)[:,:,None]-areas) / 2
 
 
 class Geometry(object):

@@ -21,8 +21,7 @@ from escheresque.util import normalize
 from escheresque import multicomplex
 from escheresque import brushes
 from escheresque import poisson
-from escheresque import computational_geometry
-from escheresque.computational_geometry import Curve
+from escheresque import computational_geometry as cg
 
 
 class DataModel(object):
@@ -38,7 +37,7 @@ class DataModel(object):
         self.points = []
         self.edges = []
 
-        self.generate(6)
+        self.generate(5)
 
     @property
     def complex(self):
@@ -125,13 +124,16 @@ class DataModel(object):
         complex = hierarchy[-1]
 
         #concat all curves
-        curve = [Curve(transform) for e in self.edges if e.boundary for mirrors in e.instantiate() for transform in mirrors]
+        curve = [cg.Curve(transform)
+                 for e in self.edges if e.boundary
+                 for mirrors in e.instantiate()
+                 for transform in mirrors]
         curve = reduce(lambda x,y: x.merge(y), curve)
 
         #instantiate a geometry
         vertices = complex.geometry.generate_vertices(self.group)
         # triangulate
-        mesh, curve = computational_geometry.triangulate(vertices, curve)
+        mesh, curve = cg.triangulate(vertices, curve)
         # return partitions
         return mesh.partition(curve)
 

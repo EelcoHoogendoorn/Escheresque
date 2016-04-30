@@ -5,11 +5,6 @@ import scipy.optimize
 import escheresque.stl
 import escheresque.computational_geometry as cg
 
-triangles = np.arange(3)[::-1].reshape(1,3)
-inner = np.eye(3)
-outer = np.eye(3) + 1
-mesh = cg.Mesh(outer, triangles).extrude(inner)
-assert mesh.is_orientated()
 
 
 filename = r'..\data\part{0}.stl'
@@ -24,11 +19,16 @@ print(mesh.vertices.shape)
 print(mesh.faces.shape)
 assert mesh.is_orientated()
 
+
 print('volume', mesh.volume()*40**3 * 12)
 
-mesh.plot()
+mesh = mesh.decimate(30000)
 
-mesh = mesh.decimate(10000)
+seed = np.zeros_like(mesh.vertices[:, 0])
+seed[np.argmin(mesh.vertices[:,2])] = 1
+distance = mesh.geodesic(seed)
+mesh.plot(np.cos(distance*30))
+
 
 print(mesh.vertices.shape)
 print(mesh.faces.shape)
