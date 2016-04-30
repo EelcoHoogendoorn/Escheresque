@@ -22,12 +22,14 @@ assert mesh.is_orientated()
 
 print('volume', mesh.volume()*40**3 * 12)
 
-mesh = mesh.decimate(30000)
 
 seed = np.zeros_like(mesh.vertices[:, 0])
 seed[np.argmin(mesh.vertices[:,2])] = 1
+# seed[np.argmin(mesh.vertices[:,0])] = 1
 distance = mesh.geodesic(seed)
 mesh.plot(np.cos(distance*30))
+
+mesh = mesh.decimate(30000)
 
 
 print(mesh.vertices.shape)

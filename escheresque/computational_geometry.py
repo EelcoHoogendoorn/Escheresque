@@ -457,9 +457,9 @@ class Mesh(PolyData):
     def edge_lengths(self):
         edges = self.vertices[self.edges()]
         lengths = np.linalg.norm(edges, axis=2)
-        return self.remap_edges(lengths)
+        return self.remap_edges(lengths) / 2
 
-    def geodesic(self, field):
+    def geodesic(self, seed, m=1):
         """Compute geodesic distance map
 
         Notes
@@ -468,18 +468,17 @@ class Mesh(PolyData):
         """
         laplacian = self.laplacian_vertex()
         mass = self.vertex_areas()
-        t = self.edge_lengths().mean() ** 2
+        t = self.edge_lengths().mean() ** 2 * m
         heat = lambda x : mass * x - laplacian * (x * t)
         operator = scipy.sparse.linalg.LinearOperator(shape=laplacian.shape, matvec=heat)
-        diffused = scipy.sparse.linalg.minres(operator, field)[0]
-        # return diffused
 
+        diffused = scipy.sparse.linalg.minres(operator, seed.astype(np.float64), tol=1e-5)[0]
         gradient = -util.normalize(self.compute_gradient(diffused))
         # self.plot(facevec=gradient)
         rhs = self.compute_divergence(gradient)
         phi = scipy.sparse.linalg.minres(laplacian, rhs)[0]
-        phi -= phi.min()
-        return phi
+        return phi - phi.min()
+
 
 def triangulate(points, curve):
     """

@@ -35,13 +35,14 @@ def test_grid():
 
 def test_sphere():
     """some tests on a sphere"""
-    vertices = util.normalize(np.random.normal(0, 1, (3000, 3)))
+    vertices = util.normalize(np.random.normal(0, 1, (10000, 3)))
     mesh = cg.Mesh(vertices, scipy.spatial.ConvexHull(vertices).simplices)
 
     seed = np.zeros_like(mesh.vertices[:, 0])
-    seed[0] = 1
+    seed[np.argmax(vertices[:, 0])] = 1
+    seed[np.argmax(vertices[:, 1])] = 1
     distance = mesh.geodesic(seed)
-    mesh.plot(color=distance)
+    mesh.plot(color=np.cos(distance*10))
     print(distance.max())
 
 
@@ -63,3 +64,5 @@ def test_triangulation():
     mesh, curve = cg.triangulate(points, curve)
     #add partitioning of points here too?
     partitions = mesh.partition(curve)
+
+test_sphere()
