@@ -24,8 +24,8 @@ print('volume', mesh.volume()*40**3 * 12)
 
 
 seed = np.zeros_like(mesh.vertices[:, 0])
-# seed[np.argmin(mesh.vertices[:,2])] = 1
-seed[np.argmax(mesh.vertices[:,2])] = 1
+#seed[np.argmax(mesh.vertices[:,0])] = 1
+seed[np.argmin(mesh.vertices[:,2])] = 1
 distance = mesh.geodesic(seed)
 mesh.plot(np.cos(distance*30))
 

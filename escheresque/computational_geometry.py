@@ -436,7 +436,6 @@ class Mesh(PolyData):
         normals = util.normalize(normals)
 
         edges = self.edges().reshape(-1, 3, 2)
-        sorted_edges = np.sort(edges, axis=-1)
         vecs = np.diff(self.vertices[edges], axis=2)[:, :, 0, :]
         gradient = (field[self.faces][:, :, None] * np.cross(normals[:, None, :], vecs)).sum(axis=1)
         return gradient / (2 * face_area[:, None])

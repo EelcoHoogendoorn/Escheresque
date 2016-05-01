@@ -829,7 +829,7 @@ class PoissonEditor(HasTraits):
             #compute new position of cursor in world space
             mark = np.array( self.cursor.actor.actors[0].position)
             mark = mark / np.linalg.norm(mark)
-            from ..util import rotation_matrix
+            from escheresque.util import rotation_matrix
             newpos = np.dot( rotation_matrix(new), np.dot(rotation_matrix(old).T, mark))
 
             if self.selected_point:
