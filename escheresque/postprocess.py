@@ -9,6 +9,9 @@ import escheresque.computational_geometry as cg
 
 filename = r'..\data\part{0}.stl'
 
+mesh = escheresque.stl.load_stl(filename.format(0))
+
+
 # # normalize orientation
 # u, s, v = np.linalg.svd(mesh.vertices, full_matrices=0)
 # mesh.vertices = mesh.vertices.dot(v[:, ::-1])
@@ -25,8 +28,8 @@ def vispy_plot():
     # Set up a viewbox to display the image with interactive pan/zoom
     view = canvas.central_widget.add_view()
 
-    from escheresque.group.octahedral import Pyritohedral
-    group = Pyritohedral()
+    # from escheresque.group.octahedral import Pyritohedral
+    # group = Pyritohedral()
 
     for i in range(12):
         mesh = escheresque.stl.load_stl(filename.format(i))
@@ -46,7 +49,6 @@ def vispy_plot():
 
 vispy_plot()
 
-quit()
 
 print(mesh.vertices.shape)
 print(mesh.faces.shape)

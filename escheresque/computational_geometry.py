@@ -457,7 +457,7 @@ class Mesh(PolyData):
 
     def edge_lengths(self):
         edges = self.vertices[self.edges()]
-        lengths = np.linalg.norm(edges, axis=2)
+        lengths = np.linalg.norm(edges[:, 1]- edges[:, 0], axis=1)
         return self.remap_edges(lengths) / 2
 
     def geodesic(self, seed, m=1):
