@@ -194,7 +194,7 @@ class Mesh(PolyData):
         unsorted_edges = self.edges().reshape(-1, 2)
         sorted_edges = np.sort(unsorted_edges, axis=-1)
 
-        unique_edges, edge_indices = npi.unique(unsorted_edges, return_inverse=True)
+        unique_edges, edge_indices = npi.unique(sorted_edges, return_inverse=True)
         face_indices = np.arange(self.faces.size) // 3
         orientation = sorted_edges[:, 0] == unsorted_edges[:, 0]
         incidence = scipy.sparse.csr_matrix((orientation * 2 - 1, (edge_indices, face_indices)))
@@ -226,13 +226,15 @@ class Mesh(PolyData):
 
         returned is a list of (point, faces) tuples, denoting the partitions
         """
+        print ('partitioning')
         # get edges with consistent ordering
         ordered_curve = self.order_edges(curve.faces)
 
         incidence, unique_edges = self.compute_face_incidence()
 
         # filter out the curve edges
-        incidence = incidence[~npi.in_(unique_edges, ordered_curve)]
+        # incidence = incidence[~npi.contains(ordered_curve, unique_edges)]
+        incidence = incidence[np.flatnonzero(~npi.in_(unique_edges, ordered_curve))]
         adjecency = incidence.T * incidence
         # find and split connected components
         n_components, labels = scipy.sparse.csgraph.connected_components(adjecency)
@@ -539,7 +541,6 @@ if __name__=='__main__':
     if True:
         # load .sch file and export parts to stl
         from escheresque.datamodel import DataModel
-        from mayavi import mlab
         from escheresque import stl, brushes
         import os
 
@@ -558,7 +559,6 @@ if __name__=='__main__':
             mesh = mesh.swept_extrude(thickness)
             assert mesh.is_orientated()
             stl.save_STL(filename.format(i), mesh)
-            break
 
         mesh.plot()
         quit()

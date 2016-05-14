@@ -3,9 +3,10 @@ channels:
   - anaconda
   - eelcohoogendoorn
   - clinicalgraphics
+  - menpo # fresh mayavi build
 dependencies:
   - python =2.7*
-  - numpy
+  - numpy =1.10*
   - numpy-indexed
   - scipy
   - numba
@@ -22,3 +23,7 @@ dependencies:
   - invoke >=0.11.1,<0.12
   # tests
   - pytest >=2.8.4,<2.9
+  # visualize
+  - pyopengl
+  - pip:    # build vispy from master
+    - "--editable=git+https://github.com/vispy/vispy.git#egg=vispy-master"
