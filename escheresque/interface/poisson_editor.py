@@ -249,7 +249,7 @@ class Domain(object):
 
 
             x,y,z = PP.T
-            FV = self.complex.topology.FV[:,::np.sign(np.linalg.det(B))]        #reverse vertex order depending on orientation
+            FV = self.complex.topology.FV[:,::int(np.sign(np.linalg.det(B)))]        #reverse vertex order depending on orientation
             source  = self.scene.mlab.pipeline.triangular_mesh_source(x,y,z, FV)
 
             #put these guys under a ui list
@@ -259,7 +259,10 @@ class Domain(object):
 
             #add polydatamapper, to control color mapping and interpolation
 ##            mapper = tvtk.PolyDataMapper(input=source.outputs[0], lookup_table=l)
-            mapper = tvtk.PolyDataMapper(input=source.outputs[0])
+            mapper = tvtk.PolyDataMapper()
+            from tvtk.common import configure_input
+            configure_input(mapper, source.outputs[0])
+
             mapper.interpolate_scalars_before_mapping = True
             mapper.immediate_mode_rendering = False
 
@@ -310,6 +313,8 @@ class Domain(object):
         if self.parent.vertex_normal:
             normals = self.complex.normals(radius)
 
+        self.recolor()
+
         for index,T in enumerate( self.root):
             for mirror,M in enumerate(T):
                 _, source, mapper = M
@@ -321,9 +326,7 @@ class Domain(object):
                 B = util.normalize(B.T).T
                 PP = np.dot(B, self.complex.geometry.decomposed.T).T       #primal coords transformed into current frame
                 if self.parent.mapping_height: PP *= radius[:, index][:, None]
-                x,y,z = PP.T
-                source.mlab_source.set(x=x,y=y,z=z)
-
+                source.mlab_source.set(points=PP)
 
                 #set normals
                 if self.parent.vertex_normal:
@@ -334,7 +337,9 @@ class Domain(object):
                     source.data.point_data.normals = None
                     source.data.cell_data.normals = None
 
-        self.recolor()
+                # needed to force a redraw of these elements
+                source.mlab_source.update()
+
 ##        for i in self.instances:
 ##            i.property.representation = 'wireframe' if self.parent.wireframe else 'surface'
 
@@ -356,8 +361,8 @@ class Domain(object):
                         col[:] = 200
                     else:
                         col[:] = 230
-                source.data.point_data.scalars = col
-                source.data.point_data.scalars.name = 'scalars'
+                source.mlab_source.set(scalars=col)
+                source.mlab_source.update()
 
 
     def remove(self):
@@ -472,12 +477,14 @@ class PoissonEditor(HasTraits):
         edge.remove()
 
     def add_cp(self, idx):
+        if not self.selected_edge: return
         edge, index = self.selected_edge
         edge.edge.curve.add_cp(idx, idx+1)
         with RenderLock(self.scene):
             edge.redraw()
             self.redraw_control()
     def remove_cp(self, idx):
+        if not self.selected_edge: return
         edge, index = self.selected_edge
         edge.edge.curve.remove_cp(idx)
         with RenderLock(self.scene):
@@ -1091,6 +1098,8 @@ class PoissonEditor(HasTraits):
                             Item('sketch_visible',  label='Sketch'),
                             Item('curvature_visible',  label='Curvature'),
                             Item('height_visible',  label='Relief'),
+                            Item('vertex_normal', label='Normal interpolation'),
+
                             show_border = True,
                             label = 'Visibility'
                         ),

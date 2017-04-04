@@ -344,12 +344,13 @@ class Mesh(PolyData):
             mesh.faces = mesh.faces[:, ::-1]
         return mesh
 
-    def plot(self, color=None, facevec=None):
+    def plot(self, color=None, facevec=None, wireframe=False):
         from mayavi import mlab
         q = self.vertices.mean(axis=0) * 0
         x, y, z = (self.vertices + q / 4).T
         mlab.triangular_mesh(x, y, z, self.faces, scalars=color)
-        # mlab.triangular_mesh(x, y, z, t, color=(0, 0, 0), representation='wireframe')
+        if wireframe:
+            mlab.triangular_mesh(x, y, z, self.faces, color=(0, 0, 0), representation='wireframe')
         if facevec is not None:
             centroids = self.face_centroids()
             mlab.quiver3d(*np.concatenate([centroids, facevec], axis=1).T)
@@ -555,12 +556,13 @@ if __name__=='__main__':
 
         for i, mesh in enumerate(partitions):
             mesh.vertices *= datamodel.sample(mesh.vertices)[:, None]
-            thickness = 0.03
+            thickness = 0.06
             mesh = mesh.swept_extrude(thickness)
             assert mesh.is_orientated()
+            mesh.faces = mesh.faces[:, ::-1]
             stl.save_STL(filename.format(i), mesh)
 
-        mesh.plot()
-        quit()
+            mesh.plot(wireframe=True)
+            quit()
 
 

@@ -129,7 +129,7 @@ def run():
 
 
 
-    if True:
+    if False:
 ##        from .interface.edge_editor import EdgeEditor
 ##        editor = EdgeEditor(dm)
         from escheresque.interface.poisson_editor import PoissonEditor

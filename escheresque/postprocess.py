@@ -12,10 +12,16 @@ filename = r'..\data\part{0}.stl'
 mesh = escheresque.stl.load_stl(filename.format(0))
 
 
-# # normalize orientation
-# u, s, v = np.linalg.svd(mesh.vertices, full_matrices=0)
-# mesh.vertices = mesh.vertices.dot(v[:, ::-1])
+# normalize orientation
+u, s, v = np.linalg.svd(mesh.vertices, full_matrices=0)
+mesh.vertices = mesh.vertices.dot(v[:, ::1])
+mesh.vertices *= 100
+print(mesh.volume())
 
+mesh = mesh.decimate(30000)
+
+escheresque.stl.save_STL(filename.format('dec'), mesh)
+quit()
 
 def vispy_plot():
 
@@ -47,7 +53,7 @@ def vispy_plot():
 
     app.run()
 
-vispy_plot()
+# vispy_plot()
 
 
 print(mesh.vertices.shape)
@@ -62,7 +68,7 @@ seed = np.zeros_like(mesh.vertices[:, 0])
 #seed[np.argmax(mesh.vertices[:,0])] = 1
 seed[np.argmin(mesh.vertices[:,2])] = 1
 distance = mesh.geodesic(seed)
-mesh.plot(np.cos(distance*30))
+# mesh.plot(np.cos(distance*30))
 
 mesh = mesh.decimate(30000)
 
@@ -70,6 +76,8 @@ mesh = mesh.decimate(30000)
 print(mesh.vertices.shape)
 print(mesh.faces.shape)
 
+import util
+dir = util.normalize([[-0.3, 0, 1]])[0]
 
 def find_displacement(mesh, seperation):
     """find displacement which results in a minimum seperation distance"""
@@ -77,7 +85,7 @@ def find_displacement(mesh, seperation):
 
     def objective(displacement):
         print(displacement)
-        return tree.query(mesh.vertices + [0,0,displacement])[0].min() - seperation
+        return tree.query(mesh.vertices + dir*displacement)[0].min() - seperation
 
     step = mesh.vertices.max() - mesh.vertices.min()
     step = scipy.optimize.root(objective, x0=step)
@@ -85,9 +93,11 @@ def find_displacement(mesh, seperation):
 
 # repeat the mesh for cost efficiency
 n_copies = 4
-step = find_displacement(mesh, seperation=0.01)
-meshes = [cg.Mesh(mesh.vertices+[0,0,step*i], mesh.faces) for i in range(n_copies)]
+step = find_displacement(mesh, seperation=0.015)
+scale = 32
+meshes = [cg.Mesh(mesh.vertices+dir*step*i, mesh.faces) for i in range(n_copies)]
 mesh = reduce(lambda x,y:x.merge(y), meshes)
+mesh.vertices *= scale
 
 
 

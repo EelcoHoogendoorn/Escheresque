@@ -223,7 +223,7 @@ def triangle_normals(complex, radius, index):
 
     b = util.normalize(B[index].T).T                   #now every row is a normalized vertex
     P = np.dot(b, PP.T).T * radius[:,index][:, None]   #go from decomposed coords to local coordinate system
-    fv = FV[:,::np.sign(np.linalg.det(b))]         #flip sign for mirrored domains
+    fv = FV[:,::int(np.sign(np.linalg.det(b)))]         #flip sign for mirrored domains
     return np.cross(P[fv[:,1]]-P[fv[:,0]], P[fv[:,2]]-P[fv[:,0]])
 
 def vertex_normals_python(complex, radius):

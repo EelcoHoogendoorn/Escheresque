@@ -154,8 +154,12 @@ class Domain(object):
 ##            lut_manager.set_lut(l, lut_manager.pylab_luts.values()[0])
 
             #add polydatamapper, to control color mapping and interpolation
-            mapper = tvtk.PolyDataMapper(input=source.outputs[0], lookup_table=l)
-##            mapper = tvtk.PolyDataMapper(input=source.outputs[0])
+            mapper = tvtk.PolyDataMapper(lookup_table=l)
+
+            from tvtk.common import configure_input
+            configure_input(mapper, source.outputs[0])
+
+            ##            mapper = tvtk.PolyDataMapper(input=source.outputs[0])
             mapper.interpolate_scalars_before_mapping = True
             mapper.immediate_mode_rendering = False
 
@@ -215,23 +219,23 @@ class Domain(object):
             N = util.normalize(self.complex.geometry.primal)
             normals = np.array([np.dot( N, T) for T in self.group.transforms.reshape(-1,3,3) ])
 
+        if not self.parent.mapping_color:
+            hf = np.ones_like(hf)
+
         for index,T in enumerate( self.root):
             for mirror,M in enumerate(T):
                 _, source, mapper = M
 
 ##                mapper.lookup_table = None
-
                 #set positions
                 B = self.group.basis[index,mirror,0]
                 B = util.normalize(B.T).T
                 PP = np.dot(B, self.complex.geometry.decomposed.T).T       #primal coords transformed into current frame
                 if self.parent.mapping_height: PP *= radius[:, index][:, None]
-                x,y,z = PP.T
-                source.mlab_source.set(x=x,y=y,z=z)
+                source.mlab_source.set(points=PP)
 
                 #set colors
-                source.data.point_data.scalars = hf[:,index] if self.parent.mapping_color else np.ones_like(hf[:,index])
-                source.data.point_data.scalars.name = 'scalars'
+                source.mlab_source.set(scalars=hf[:,index])
 
                 #set normals
                 if self.parent.vertex_normal:
@@ -241,6 +245,8 @@ class Domain(object):
                 else:
                     source.data.point_data.normals = None
                     source.data.cell_data.normals = None
+
+                source.mlab_source.update()
 
 
         for i in self.instances:
