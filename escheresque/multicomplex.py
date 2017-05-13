@@ -449,7 +449,7 @@ class MultiComplex(object):
             #compute largest harmonic for determining maximum timestep
             self.largest = harmonics.largest_harmonic(self)
 
-            k = 10
+            k = 50
             parent = self.parent
             V, v = parent.eigenvectors[:k], parent.eigenvalues[:k]
 

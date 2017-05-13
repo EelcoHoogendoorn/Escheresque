@@ -8,3 +8,7 @@ For example, here are twelve identical leatherback turtles, on a Pyritohedral sy
 Parts can be extruded and exported for 3d printing
 
 ![Turtle](data/turtle.png)
+
+And here 12 printed parts, that with a bit of puzzeling, fit together in a self-supporting manner
+
+![Turtle](data/printed.png)

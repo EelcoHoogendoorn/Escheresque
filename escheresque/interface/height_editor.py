@@ -451,7 +451,7 @@ class HeightEditor(HasTraits):
     def _harmonic_fired(self):
         with RenderLock(self.scene):
 ##            self.eigen = self.complex.harmonic(self.eigen)
-            self.datamodel.heightfield = self.complex.P0s *  self.complex.eigenvectors[self.eigen]
+            self.datamodel.heightfield = self.complex.P0s * self.complex.eigenvectors[self.eigen]
             self.domain.redraw()
 
 

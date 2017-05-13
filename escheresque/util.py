@@ -94,3 +94,25 @@ def rotation_axis_angle(axis, angle):
     q=np.roll(q, axis, 0)
     q=np.roll(q, axis, 1)
     return q
+
+
+def rotation_matrix(angles):
+    """
+    empirical knowledge:angles are in-order: XYZ
+    """
+    angles = angles * np.pi / 180
+    S = np.sin(angles)
+    C = np.cos(angles)
+    CS = np.array((C,S)).T
+
+    def primitive(axis, ca, sa):
+        q = np.array([[1, 0, 0], [0, ca, -sa], [0, sa, ca]])
+        q=np.roll(q, axis, 0)
+        q=np.roll(q, axis, 1)
+        return q
+
+    def multiply(a,b,c):
+        return np.dot(np.dot(a, b), c)
+
+    X,Y,Z = [primitive(i, *cs) for i,cs in enumerate(CS)]
+    return multiply(Z, X, Y)

@@ -62,8 +62,8 @@ class Point(HasTraits):
     """
     def __init__(self, parent, point):
         super(Point, self).__init__()
-        self.parent = parent
-        self.point = point          #datamodel handle
+        self.parent = parent        # parent ui model
+        self.point = point          # datamodel handle
 
     @property
     def scene(self):
@@ -100,7 +100,7 @@ class Point(HasTraits):
     def set_visible(self, value):
         """recolor all actors"""
         for mirror in self.mirrors:
-            mirror.actor.visible=value
+            mirror.actor.visible = value
 
 
     def redraw(self):
@@ -421,7 +421,7 @@ class PoissonEditor(HasTraits):
     constraints         = Enum(Constraints)
 
     tension_slider      = Range(0.0,1.0)
-    radius_cp           = Float(1)
+    radius_cp           = Float(1.)
 
     new                 = Button()
     save                = Button()
@@ -626,53 +626,45 @@ class PoissonEditor(HasTraits):
 
 
     def _update_fired(self):
-        """
-        update the heightfield in accordance with the guide curves, and redraw
-        """
+        """update the heightfield in accordance with the guide curves, and redraw"""
         self.datamodel.update()
         with RenderLock(self.scene):
             self.domain.redraw()
 
-
     def redraw_point(self, point):
         """perform updates to plots after point move"""
         point.redraw()
-        for edge in self.edges:
-            if point.point in edge.edge.points:
-                edge.redraw(False)
+        # FIXME: updating the edges causes a crash during point selection
+        # for edge in self.edges:
+        #     if point.point in edge.edge.points:
+        #         edge.redraw(False)
+
     def redraw_control(self):
         """redraw control mesh"""
         edge, index = self.selected_edge
 
         cp = edge.edge.curve.controlpoints()[index]
         if not self.height_visible: cp = util.normalize(cp)
-        x,y,z = cp[1:-1].T
-        self.control_points.mlab_source.reset(x=x,y=y,z=z)
+        self.control_points.mlab_source.reset(points=cp)
 
         cm = edge.edge.curve.controlmesh()[index]
         if not self.height_visible: cm = util.normalize(cm)
-        x,y,z = cm.T
-        self.control_mesh.mlab_source.reset(x=x,y=y,z=z)
+        self.control_mesh.mlab_source.reset(points=cm)
+
     def redraw_group(self):
         """redraw primal/mid/dual markers"""
         with RenderLock(self.scene):
             p = self.datamodel.primal()
             if self.height_visible: p = p * self.datamodel.sample(p)[:,None]
-            x,y,z = p.T
-            self.primal.mlab_source.reset(x=x,y=y,z=z)
+            self.primal.mlab_source.reset(points=p)
 
             p = self.datamodel.mid()
             if self.height_visible: p = p * self.datamodel.sample(p)[:,None]
-            x,y,z = p.T
-            self.mid.mlab_source.reset(x=x,y=y,z=z)
+            self.mid.mlab_source.reset(points=p)
 
             p = self.datamodel.dual()
             if self.height_visible: p = p * self.datamodel.sample(p)[:,None]
-            x,y,z = p.T
-            self.dual.mlab_source.reset(x=x,y=y,z=z)
-
-
-
+            self.dual.mlab_source.reset(points=p)
 
 
     def on_mouse_move(self, interactor, event):
@@ -716,14 +708,13 @@ class PoissonEditor(HasTraits):
 
     def _selected_point_changed(self, new):
         with RenderLock(self.scene):
-            if new:
+            if new is not None:
                 point, index = self.selected_point
                 p = point.point.instantiate()[index]
                 self.cursor.actor.actors[0].position = p*self.datamodel.sample(p)
-##                print self.datamodel.sample(p)
-                self.cursor.visible = True
 
                 self.radius_cp = point.point.radius
+                self.cursor.visible = True
 
             else:
                 self.cursor.visible = False
@@ -732,7 +723,7 @@ class PoissonEditor(HasTraits):
     def _selected_edge_changed(self, new):
 ##            self.selected_cp = None
         with RenderLock(self.scene):
-            if new:
+            if new is not None:
                 self.redraw_control()
 
                 self.control_points.visible = True
@@ -796,7 +787,6 @@ class PoissonEditor(HasTraits):
         edge, index = self.selected_edge
         edge.edge.width = self.width_edge
 
-
     def _tension_slider_changed(self):
         if self.selected_cp is None: return
         edge, index = self.selected_edge
@@ -804,26 +794,21 @@ class PoissonEditor(HasTraits):
         with RenderLock(self.scene):
             edge.redraw(True)
 
-    def _radius_cp_changed(self):
-        if not self.selected_cp is None:
+    def _radius_cp_changed(self, new):
+        if self.selected_cp is not None:
             edge, index = self.selected_edge
             edge.edge.curve.radius[self.selected_cp] = self.radius_cp
-            with RenderLock(self.scene):
-                edge.redraw(True)
-        if not self.selected_point is None:
-            point, index  = self.selected_point
+            # with RenderLock(self.scene):
+            edge.redraw(True)
+        if self.selected_point is not None:
+            point, index = self.selected_point
 
             point.point.radius = self.radius_cp
-            with RenderLock(self.scene):
-                self.redraw_point(point)
-                #reset cursor
-                p = self.cursor.actor.actors[0].position
-                self.cursor.actor.actors[0].position = p / np.linalg.norm(p) * self.radius_cp
-
-
-
-
-
+            # with RenderLock(self.scene):
+            self.redraw_point(point)
+            #reset cursor
+            p = self.cursor.actor.actors[0].position
+            self.cursor.actor.actors[0].position = p / np.linalg.norm(p) * self.radius_cp
 
 
 
@@ -845,7 +830,7 @@ class PoissonEditor(HasTraits):
                 newpos = point.point.match(index, newpos)
                 with RenderLock(self.scene):
                     self.redraw_point(point)
-                    self.cursor.actor.actors[0].position = newpos * self.datamodel.sample(newpos)
+                    self.cursor.actor.actors[0].position = (newpos * self.datamodel.sample(newpos))
 
             if self.selected_cp:
                 #convert newpos into new spline coords
@@ -855,7 +840,7 @@ class PoissonEditor(HasTraits):
 
                     edge.redraw(False)
                     self.redraw_control()
-                    self.cursor.actor.actors[0].position = newpos * self.datamodel.sample(newpos)
+                    self.cursor.actor.actors[0].position = (newpos * self.datamodel.sample(newpos))
 
 
 
@@ -1056,8 +1041,8 @@ class PoissonEditor(HasTraits):
         picker.add_observer('EndPickEvent', on_point_pick)
         picker.tolerance = 3e-3
 
-        picker = self.scene.picker.worldpicker
-        picker.add_observer('EndPickEvent', worldpicker_callback)
+        # picker = self.scene.picker.worldpicker
+        # picker.add_observer('EndPickEvent', worldpicker_callback)
 
         def mousewheel(*args, **kwargs):
             print args, kwargs
