@@ -11,4 +11,4 @@ Parts can be extruded and exported for 3d printing
 
 And here 12 printed parts, that with a bit of puzzeling, fit together in a self-supporting manner
 
-![Printed](data/printed.png)
+![Printed](data/printed.jpg)
