@@ -115,7 +115,7 @@ def run():
         dm = DataModel(Group())
         # dm.generate(6)
     else:
-        path = r'..\data'
+        path = r'../data'
         filename = 'turtles.sch'
 ##        filename = 'angles_and_demons.sch'
 
@@ -129,7 +129,7 @@ def run():
 
 
 
-    if False:
+    if True:
 ##        from .interface.edge_editor import EdgeEditor
 ##        editor = EdgeEditor(dm)
         from escheresque.interface.poisson_editor import PoissonEditor

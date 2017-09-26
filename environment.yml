@@ -2,11 +2,11 @@ name: escheresque
 channels:
   - anaconda
   - conda-forge
-  - eelcohoogendoorn
-  - clinicalgraphics
+#  - eelcohoogendoorn
+#  - clinicalgraphics
   - menpo # fresh mayavi build
 dependencies:
-  - python
+  - python = 2
   - numpy
   - numpy-indexed
   - scipy
@@ -14,14 +14,16 @@ dependencies:
   - openmesh
   - matplotlib
   - vtk
-  - qt
+  - qt = 4
   - mayavi
+#  - wxpython
   - traitsui
   - pyface
-  - openmesh
+  - pytest
+#  - openmesh
   # dev
   # tests
   # visualize
-  - pyopengl
-  - pip:    # build vispy from master
-    - "--editable=git+https://github.com/vispy/vispy.git#egg=vispy-master"
+#  - pyopengl
+#  - pip:    # build vispy from master
+#    - "--editable=git+https://github.com/vispy/vispy.git#egg=vispy-master"

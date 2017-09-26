@@ -19,15 +19,13 @@ constrained triangulation is a messy problem, and on the sphere ne might think i
 but by exploiting this duality we can kill two t-rexes with one pebble.
 """
 
-from itertools import izip
-
 import numpy as np
 import numpy_indexed as npi
 from scipy.spatial import cKDTree as KDTree
 import scipy.sparse
 import scipy.sparse.linalg
 import scipy.spatial
-import openmesh
+#import openmesh
 
 from escheresque import util
 
@@ -95,7 +93,7 @@ class Curve(PolyData):
             """test if spherical line segments intersect. bretty elegant"""
             intersection = np.cross(normal[i], normal[j])                               #intersection direction of two great circles; sign may go either way though!
             return all(np.prod(np.dot(projector[e], intersection)) > 0 for e in (i,j))  #this direction must lie within the cone spanned by both sets of endpoints
-        for ei,(p,r,cidx) in enumerate(izip(mid, radius, faces)):
+        for ei,(p,r,cidx) in enumerate(zip(mid, radius, faces)):
             V = [v for v in tree.query_ball_point(p, r) if v not in cidx]
             edges = np.unique([ej for v in V for ej in incident[v]])
             for ej in edges:
@@ -129,7 +127,7 @@ class Curve(PolyData):
         #build new curves
         _curve_p = [c for c in self.vertices]
         _curve_idx = []
-        for e,(m,r,cidx) in enumerate(izip( mid, radius, self.faces)):
+        for e,(m,r,cidx) in enumerate(zip( mid, radius, self.faces)):
             try:
                 d,ip = min(     #codepath for use in iterative scheme; only insert the most balanced split; probably makes more awkward ones obsolete anyway
                     [insertion_point(e,v) for v in tree.query_ball_point(m, r) if not v in cidx],
@@ -160,7 +158,7 @@ class Curve(PolyData):
         #eliminate near edges
         def near_edge(e, p):
             return np.abs(np.dot(points[p]-mid[e], normal[e])) < radius
-        for i,(p,r) in enumerate(izip(mid, edge_radius)):
+        for i,(p,r) in enumerate(zip(mid, edge_radius)):
             coarse = tree.query_ball_point(p, r)
             index[[c for c in coarse if near_edge(i, c)]] = 0
         #eliminate near points
@@ -488,11 +486,11 @@ def triangulate(points, curve):
     while being constrained by the boundary dicated by curve
     """
     #test curve for self-intersection
-    print 'testing curve for self-intersection'
+    print('testing curve for self-intersection')
     curve.self_intersect()
 
     #trim the pointset, to eliminate points co-linear with the cutting curve
-    print 'trimming dataset'
+    print('trimming dataset')
     diff   = np.diff(curve.vertices[curve.faces], axis=1)[:,0,:]
     length = np.linalg.norm(diff, axis=1)
     points = curve.trim(points, length.mean()/4)
@@ -503,7 +501,7 @@ def triangulate(points, curve):
         newcurve = curve.refine(points)
         if len(newcurve.vertices)==len(curve.vertices):
             break
-        print 'curve refined'
+        print('curve refined')
         curve = newcurve
 
 
@@ -517,13 +515,13 @@ def triangulate(points, curve):
     that corresponds to an icosahedron with level 8 subdivision; not too bad
     editor is very unresponsive at this level anyway
     """
-    print 'triangulating'
+    print('triangulating')
     allpoints = np.concatenate((curve.vertices, points))    #include origin; facilitates clipping
     hull = scipy.spatial.ConvexHull(util.normalize(allpoints))
     triangles = hull.simplices
 
     #order faces coming from the convex hull
-    print 'ordering faces'
+    print('ordering faces')
     FP        = util.gather(triangles, allpoints)
     mid       = FP.sum(axis=1)
     normal    = util.normals(FP)

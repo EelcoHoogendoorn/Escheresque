@@ -168,11 +168,11 @@ class Group(object):
                     yield i, t
 
 
-        P = [ np.array( [list(iter(neighbor(i, p))) for i in xrange(self.index)], np.int32) for p in xrange(3)]
+        P = [ np.array( [list(iter(neighbor(i, p))) for i in range(self.index)], np.int32) for p in range(3)]
         self.edges            = tuple([p[:,:,0] for p in P])
         self.edge_transforms  = tuple([p[:,:,1] for p in P])
 
-##        self.edges = np.array([[list(iter(neighbor(i, e))) for i in xrange(self.index)] for e in xrange(3)], np.int32)
+##        self.edges = np.array([[list(iter(neighbor(i, e))) for i in range(self.index)] for e in range(3)], np.int32)
 ##        self.edges, self.edge_transforms = self.edges[:,:,:,0], self.edges[:,:,:,1]
 
 
@@ -193,7 +193,7 @@ class Group(object):
                 if neighbor == point:
                     yield i,t
 
-        P = [ np.array( [list(iter(verts(i, p))) for i in xrange(self.index)], np.int32) for p in xrange(3)]
+        P = [ np.array( [list(iter(verts(i, p))) for i in range(self.index)], np.int32) for p in range(3)]
         self.vertices            = tuple([p[:,:,0] for p in P])
         self.vertices_transforms = tuple([p[:,:,1] for p in P])
 

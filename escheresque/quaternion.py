@@ -33,7 +33,7 @@ class Quaternion(object):
 
         ca = self.w
         sa = np.sqrt( 1.0 - ca * ca )
-        print sa
+        print(sa)
         angle = np.arccos(ca) * 2# * RADIANS
 
         if np.abs(sa) < 0.0005:

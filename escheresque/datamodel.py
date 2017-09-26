@@ -13,6 +13,7 @@ at least store level, and heightmap
 generalize to editing on a composition of layers?
 """
 import cPickle as pickle
+# import pickle
 
 import numpy as np
 
@@ -30,7 +31,7 @@ class DataModel(object):
     radius = None       #[index, vertices] array with per vertex radius values.
 
     def __init__(self, group):
-        print 'creating dm'
+        print('creating dm')
         self.group = group      #immutable group info
 
 
@@ -86,10 +87,13 @@ class DataModel(object):
         return normalize(self.group.dual)
 
     def save(self, filename):
-        pickle.dump(self, file(filename, 'wb'), -1)
+        with open(filename, 'wb') as fh:
+            pickle.dump(self, fh, -1)
     @staticmethod
     def load(filename):
-        return pickle.load(file(filename, 'rb'))
+        with open(filename, 'rb') as fh:
+            # return pickle.load(fh, encoding='latin1')
+            return pickle.load(fh)
 
     def add_point(self, pos):
         """add a point to datamodel, given a world space coordinate"""
@@ -227,9 +231,8 @@ class Point(object):
         constrain bary coords, given world coords of zero transform point
         return constrained point in world coords
         """
-#        print self.domain
         B = self.group.basis[self.domain]
-        B = B * self.constraints[np.newaxis,:]      #zero out deactived basis points
+        B = B * self.get_constraint()[np.newaxis,:]      #zero out deactived basis points
         bary = np.linalg.lstsq(B, position)[0]
         self.bary = self.normalize(bary)
         return normalize( np.dot(B, self.bary))

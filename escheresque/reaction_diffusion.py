@@ -98,12 +98,11 @@ class ReactionDiffusion(object):
         the image frames one by one
         """
         #repeat 'frames' times
-        for i in xrange(iterations):
-            print i
+        for i in range(iterations):
 
             #make 20 timesteps per frame; we dont need to show every one of them,
             #since the change from the one to the next is barely perceptible
-            for r in xrange(20):
+            for r in range(20):
                 #update the chemical concentrations
                 self.integrate(self.gray_scott_derivatives(*self.state))
 

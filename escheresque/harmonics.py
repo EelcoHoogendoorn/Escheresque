@@ -82,7 +82,7 @@ def solve_cg(deflate, operator, rhs, x0 = None):
     delta_new = dot(r,r)
     delta_0 = delta_new
 
-    for i in xrange(max_iter):
+    for i in range(max_iter):
         deflate(d)
         q = operator(d)
         deflate(q)
@@ -141,7 +141,7 @@ def inverse_iteration(complex, operator, shift, current = None):
 
     eps = 1e-9
 
-    for i in xrange(40):
+    for i in range(40):
         deflate(current)
 ##        current = cg_wrapper(shifted_operator, current, current)
         current = solve_cg(deflate, shifted_operator, current, current)
@@ -153,7 +153,7 @@ def inverse_iteration(complex, operator, shift, current = None):
             shift = new/old
 
             if np.abs( shift-oldshift) < eps: break
-        print new/old
+        print(new/old)
         current /= current.max()
 
     return current, shift
@@ -174,7 +174,7 @@ def inverse_iteration(complex, operator, shift, current = None):
         lamda = dot(y,x)
         shift = shift + 1 / lamda
         err = norm(y-lamda*x) / norm(y)
-        print err
+        print(err)
 
     return x, shift
 
@@ -265,13 +265,13 @@ def full_eigs(complex):
     def L(x):
         x = x.T
         y = np.empty_like(x)
-        for i in xrange(len(x)):
+        for i in range(len(x)):
             y[i] = complex.laplace_P0D2_special(x[i].reshape(complex.shape)).ravel()
         return y.T
     def db(x):
         x = x.T
         y = np.empty_like(x)
-        for i in xrange(len(x)):
+        for i in range(len(x)):
             y[i] = complex.deboundify( complex.boundify(x[i].reshape(complex.shape))).ravel()
         return y.T
     #make sure we start with all components
@@ -330,7 +330,7 @@ def refine_eigs(complex, V0, v0):
     def diffuse_special_mid(sm, v):
         """isnt this to be preferred over inversion?"""
         D2 = complex.boundify( complex.d2s * sm)
-        for i in xrange(10):
+        for i in range(10):
             D2 = complex.diffuse_normalized_d2(D2)
         return complex.sd2 * complex.deboundify( D2)
 
@@ -341,11 +341,11 @@ def refine_eigs(complex, V0, v0):
     V[0] = V0[0] / np.linalg.norm(V0[0].ravel())
     v[0] = 0
 
-    for i in xrange(1, len(v0)):
+    for i in range(1, len(v0)):
         V[i] = V0[i]
 
-    for r in xrange(3):
-        for i in xrange(1, len(v0)):
+    for r in range(3):
+        for i in range(1, len(v0)):
             q = V[i]
 ##            q = invert_special_mid(q, v0[i])
             q = diffuse_special_mid(q, v0[i])
@@ -353,7 +353,7 @@ def refine_eigs(complex, V0, v0):
             q = q / np.linalg.norm( q.ravel())
 
             #ensure orthonormalization against lower vectors
-            for j in xrange(0, i):
+            for j in range(0, i):
                 z = V[j]
                 q = q - z * np.dot(q.ravel(), z.ravel())# / np.dot(z.ravel(),z.ravel()))
 ##            q = q - np.einsum(',->ni', q, V[:i])
@@ -361,7 +361,7 @@ def refine_eigs(complex, V0, v0):
 
 
     #compute eigenvalues for the new eigenvectors
-    for i in xrange(1, len(v0)):
+    for i in range(1, len(v0)):
         z = V[i]
         q = complex.sP0 * complex.laplace_P0D2_special(complex.d2s * z)
         v[i] = np.linalg.norm(q.ravel()) / np.linalg.norm(z)

@@ -41,8 +41,8 @@ def solve_poisson_rec(hierarchy, rhs, x):
             ox = func(ix)
             err = np.linalg.norm(complex.poisson_residual(ix, rhs).ravel()) - \
                   np.linalg.norm(complex.poisson_residual(ox, rhs).ravel())
-            print 'improvement', func.__name__
-            print err
+            print('improvement', func.__name__)
+            print(err)
             return ox
         return inner
 
@@ -52,7 +52,7 @@ def solve_poisson_rec(hierarchy, rhs, x):
 
 ##    iterations = 3
     def solve_poisson_iterate(x, iterations):
-        for i in xrange(iterations):
+        for i in range(iterations):
 ##            x = complex.jacobi_d2(x, rhs)
             x = complex.poisson_descent(x, rhs)
         return x
@@ -95,7 +95,7 @@ def solve_poisson(hierarchy, rhs, x0 = None):
 
     for i in range(10):
         res = complex.poisson_residual(x, rhs)
-        print i, np.linalg.norm(res.ravel())
+        print(i, np.linalg.norm(res.ravel()))
         x = solve_poisson_rec(hierarchy, rhs, x)
     return complex.P0D2 * x
 
@@ -135,11 +135,11 @@ def solve_poisson_full(hierarchy, rhs):
 ##    print q.mean(), q.std(), q.min(), q.max()
 
 ##    print 'v-cycle'
-    for i in xrange(2):
+    for i in range(2):
         x = solve_poisson_rec(hierarchy, rhs, x)
 
     res = complex.poisson_residual(x, rhs)
-    print np.linalg.norm(res.ravel())
+    print(np.linalg.norm(res.ravel()))
 
     return x
 
@@ -182,7 +182,7 @@ def diffuse_rec(hierarchy, x, time):
     minimum_time = complex.time_per_iteration * iterations * 2  #pre-and postsmoothing
 
     def number_iterate(x):
-        for i in xrange(iterations):
+        for i in range(iterations):
             x = complex.diffuse_normalized_d2(x)
         return x
     def fractional_iterate(x, t):
@@ -228,7 +228,7 @@ def diffuse_fixed_rec(hierarchy, x, depth):
 
     iterations = 5
     def diffuse_iterate(x):
-        for i in xrange(iterations):
+        for i in range(iterations):
             x = complex.diffuse_normalized_d2(x)
         return x
 

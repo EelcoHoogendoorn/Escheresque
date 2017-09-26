@@ -158,7 +158,7 @@ class Mapping_d2(object):
         update = np.any(baries<0, -1)
         if np.any(update):
             index, baries[update] = self.group.find_support(points[update])
-            for si, i in itertools.izip( self.index, index):
+            for si, i in itertools.zip( self.index, index):
                 si[update] = i
 
         #map all points to the root domain for computations; all domains have identical tesselation anyway
@@ -166,7 +166,7 @@ class Mapping_d2(object):
 
         #add caching here as well? many d2 points may simply remain within their triangle
         faces = pick_primal_triangles(self.hierarchy, local)
-        print faces
+        print(faces)
 
         #now do fundamental domain picking. need to have edge midpoints, triangle corners, and dual
         #endresult should be a primal-mid-dual index for each point, for fast indexing
@@ -184,20 +184,20 @@ class Mapping_d2(object):
         v_idx = linear_index // 2
         e_idx = (linear_index - 3) // 2
 
-        print linear_index
-        print v_idx
-        print e_idx
+        print(linear_index)
+        print(v_idx)
+        print(e_idx)
 
         self.v_idx = self.complex.topology.FV [faces,v_idx]
         self.e_idx = self.complex.topology.FEi[faces,e_idx]
         self.f_idx = faces
-        print self.v_idx
-        print self.e_idx
-        print self.f_idx
+        print(self.v_idx)
+        print(self.e_idx)
+        print(self.f_idx)
 
         self.sub_baries = sub_baries[np.arange(len(linear_index)), linear_index]
         self.sub_baries /= self.sub_baries.sum(axis=-1)[:, None]
-        print self.sub_baries
+        print(self.sub_baries)
 
     def sample_d2(self, field):
         """sample a d2-form"""

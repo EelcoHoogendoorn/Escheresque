@@ -16,6 +16,12 @@ import itertools
 
 from escheresque.group.group import *
 
+def experimental():
+    from pycomplex import synthetic
+    icosahedron = synthetic.icosahedron()
+    divided = icosahedron.subdivide_fundamental()
+    divided.plot()
+
 
 class Icosahedral(Group):
     """

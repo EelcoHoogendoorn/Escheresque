@@ -117,7 +117,7 @@ class Edge(HasTraits):
             """
             would be better to construct only part of the pipeline that is required, and not need the invisible copy
             """
-            print curve.shape
+            print(curve.shape)
             dummy = self.scene.mlab.plot3d(
                 *curve.T,
                 tube_radius = 0.005,
@@ -361,7 +361,7 @@ class EdgeEditor(HasTraits):
         sg = SelectGroup()
         sg.configure_traits(kind='livemodal')
         if sg.selected_group:
-            print 'generating new group; this may take a few seconds'
+            print('generating new group; this may take a few seconds')
             def worker():
                 """The threaded function"""
                 kwargs = dict(N=sg.N) if sg.first=='Dihedral' else {}
@@ -384,7 +384,7 @@ class EdgeEditor(HasTraits):
         try:
             import os.path
             self.datamodel.save(os.path.join(self.filedir, self.filename))
-            print 'saved'
+            print('saved')
         except:
             self._save_as_fired()
 
@@ -403,7 +403,7 @@ class EdgeEditor(HasTraits):
             except:
                 import traceback
                 traceback.print_exc()
-                print 'error saving file'
+                print('error saving file')
 
     def _load_fired(self):
         file_wildcard = '*.sch'
@@ -418,7 +418,7 @@ class EdgeEditor(HasTraits):
             except:
                 import traceback
                 traceback.print_exc()
-                print 'error loading file'
+                print('error loading file')
 
     def _edit_relief_fired(self):
         """
@@ -467,7 +467,7 @@ class EdgeEditor(HasTraits):
 ##        if False:
 ##            radius = np.linspace(0.99, 1.01, len(partitions))
 ##            from mayavi import mlab
-##            for i,(p,c) in enumerate(izip( partitions, [(1,0,0), (0,1,0),(0,0,1),(0,1,1),(1,0,1),(1,1,0)])):
+##            for i,(p,c) in enumerate(zip( partitions, [(1,0,0), (0,1,0),(0,0,1),(0,1,1),(1,0,1),(1,1,0)])):
 ##                solid_points, solid_triangles = extrude(allpoints, p, radius[i], 0.8)
 ##
 ##                x,y,z= solid_points.T
@@ -501,7 +501,7 @@ class EdgeEditor(HasTraits):
 
 
     def on_mouse_move(self, interactor, event):
-        print interactor.GetEventPosition()
+        print(interactor.GetEventPosition())
 
     def on_button_press(self, interactor, event):
         pos = interactor.GetEventPosition()
@@ -557,10 +557,10 @@ class EdgeEditor(HasTraits):
 
 
     def _constraints_changed(self, new):
-        print new
+        print(new)
         if self.selected_point is None: return
         point, index  = self.selected_point
-        print new
+        print(new)
         newpos = point.point.set_constraint(new)
 
         with RenderLock(self.scene):
@@ -742,7 +742,7 @@ class EdgeEditor(HasTraits):
                 for m,mirror in enumerate(point.mirrors):
                     if picker.actor in mirror.actor.actors:
                         factor = mirror.glyph.glyph_source.glyph_source.output.points.to_array().shape[0]
-                        point_id = picker.point_id / factor
+                        point_id = picker.point_id // factor
                         if point_id != -1:
                             newpoint = point, (m,point_id)
                             if self.add_edge_toggle and self.selected_point and self.selected_point!=newpoint:
@@ -787,7 +787,7 @@ class EdgeEditor(HasTraits):
             if picker.actor in self.control_points.actor.actors:
                 factor = self.control_points.glyph.glyph_source.glyph_source.output.points.to_array().shape[0]
 
-                point_id = picker.point_id / factor
+                point_id = picker.point_id // factor
                 # If the no points have been selected, we have '-1'
                 if point_id != -1:
                     new_cp = point_id + 1
@@ -828,7 +828,7 @@ class EdgeEditor(HasTraits):
         picker.add_observer('EndPickEvent', worldpicker_callback)
 
         def mousewheel(*args, **kwargs):
-            print args, kwargs
+            print(args, kwargs)
 
 
         """

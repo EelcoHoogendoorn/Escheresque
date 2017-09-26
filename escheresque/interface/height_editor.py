@@ -342,14 +342,14 @@ class HeightEditor(HasTraits):
         sg.configure_traits(kind='livemodal')
         if sg.selected_group:
 
-            print 'generating new group; this may take a few seconds'
+            print('generating new group; this may take a few seconds')
 
             def worker():
 
                 if MAYAVI_THREADING:
-                    print 'this is reached'
-                    print np.ones(4)        #already here we have trouble!
-                    print 'this is not'
+                    print('this is reached')
+                    print(np.ones(4))        #already here we have trouble!
+                    print('this is not')
 
                 """The threaded function"""
                 kwargs = dict(N=sg.N) if sg.first=='Dihedral' else {}
@@ -402,7 +402,7 @@ class HeightEditor(HasTraits):
             except:
                 import traceback
                 traceback.print_exc()
-                print 'error saving file'
+                print('error saving file')
     def _load_fired(self):
         file_wildcard = '*.*'
         dialog = FileDialog(action="open", wildcard=file_wildcard, default_directory = self.filedir)
@@ -416,12 +416,12 @@ class HeightEditor(HasTraits):
             except:
                 import traceback
                 traceback.print_exc()
-                print 'error loading file'
+                print('error loading file')
 
 
 
     def _regenerate_fired(self):
-        print 'regenerating'
+        print('regenerating')
 
         def worker():
             self.datamodel.regenerate(self.subdivision)
@@ -571,7 +571,7 @@ class HeightEditor(HasTraits):
 
         def point_picker_callback(picker):
             pos = picker._get_pick_position()
-            print pos
+            print(pos)
 ##            pos = np.array( pos+(0,))
 ##            pos = np.linalg.solve(get_world_to_view_matrix(), pos)
 ##            print pos
@@ -772,22 +772,22 @@ class HeightEditor(HasTraits):
 ##                pos = np.array((nx,ny,1,1) , dtype=np.float)        #pos in display coords
                 pos = np.array(((nx,ny,1,1),(nx,ny,10,1)) , dtype=np.float).T        #pos in display coords
                 pos = np.linalg.solve(view_display, pos)
-                print pos                                           #pos in viewport
+                print(pos)                                         #pos in viewport
                 pos = np.linalg.solve(world_view, pos).T
 ##                print pos[:3]/pos[3] - self.scene.camera.position
                 pos = pos[:, :3] / pos[:, 3:]
-                print pos
+                print(pos)
                 d = pos[1]-pos[0]
                 o = pos[0]
                 A = np.dot(d,d)
                 B = np.dot(o,d)*2
                 C = np.dot(o,o) - 1
                 D = B**2-4*A*C
-                print D
+                print(D)
 
 ##                print pos[:3,0] / pos[3,0]
 ##                print pos[:3,1] / pos[3,1]
-                print self.scene.camera.position
+                print(self.scene.camera.position)
 
                 return
 
@@ -795,11 +795,11 @@ class HeightEditor(HasTraits):
                 pos[:3] = self.scene.camera.position
                 pos[2]-=1
                 pos = np.dot(world_view, pos)
-                print pos
+                print(pos)
                 pos = pos / pos[3]
-                print pos
+                print(pos)
                 pos = np.dot(view_display, pos)
-                print pos
+                print(pos)
 
 
 
@@ -832,12 +832,12 @@ class HeightEditor(HasTraits):
 ##                ()
 
         def dummy(*args, **kwargs):
-            print args, kwargs
+            print(args, kwargs)
 
         """
         setup interactor matters here
         """
-        print self.scene.mlab.view()
+        print(self.scene.mlab.view())
         if True:
 ##            self.scene.interactor.remove_all_observers()
             self.scene.interactor.interactor_style = tvtk.InteractorStyleUser()
@@ -853,7 +853,7 @@ class HeightEditor(HasTraits):
             self.scene.interactor.add_observer('MouseMoveEvent', mouse_move, 1)
 
 
-        print self.scene.camera.get()
+        print(self.scene.camera.get())
         self.scene.camera.clipping_range = (1,10)
         cam =  tvtk.to_vtk( self.scene.camera)
 ##        print cam.GetScreenBottomLeft()
@@ -873,7 +873,7 @@ class HeightEditor(HasTraits):
 
 
     def on_mouse_move(self, interactor, event):
-        print interactor.GetEventPosition()
+        print(interactor.GetEventPosition())
 
     def on_button_press(self, interactor, event):
         pos = interactor.GetEventPosition()

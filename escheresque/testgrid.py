@@ -74,4 +74,3 @@ quit()
 
 I =  np.linalg.pinv(A.astype(np.float))
 I[I<1e-6] = 0
-print I*6

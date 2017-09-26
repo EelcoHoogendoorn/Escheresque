@@ -30,8 +30,6 @@ coeffs stop being meaningful at some point though. also, no point in going coars
 if boundary points start to rival interior points
 """
 
-from itertools import izip
-
 import numpy as np
 
 from escheresque import util
@@ -99,8 +97,8 @@ def solve_poisson_rec(hierarchy, forcefield, edges, coefficients):
         edges = np.vstack(edges)
         radius = np.sqrt(util.dot(edges, edges))        #compute target radius at each point
 
-        print 'outer unknowns'
-        print len(radius)
+        print('outer unknowns')
+        print(len(radius))
 
         #pick edges against the sphere. give each edge its own mapping
         mapping = brushes.Mapping(hierarchy, edges)
@@ -118,8 +116,8 @@ def solve_poisson_rec(hierarchy, forcefield, edges, coefficients):
     else:
         base_coefficients = coefficients
 
-    print 'net force'
-    print base_coefficients.sum()
+    print('net force')
+    print(base_coefficients.sum())
 
 
     if True:
@@ -152,16 +150,16 @@ def solve_poisson_rec(hierarchy, forcefield, edges, coefficients):
         c = np.linalg.lstsq(S, r)[0]
 ##        print c
 
-        return lambda I: sum(i*q for i,q in izip(I, c))
+        return lambda I: sum(i*q for i,q in zip(I, c))
 
 
 ##    for i in range(18-len(hierarchy)):  #iterate until convergence
     for i in range(10):  #iterate until convergence
-        print i
+        print(i)
         #scale curves with coef estimates as preconditioner?
         coeff_dir = sample_residual(height) #/ scaling
         coeff_dir = coeff_dir - coeff_dir.mean()   #balance forces; move only in space of valid coefficients
-        print 'outer convergence',  np.linalg.norm( coeff_dir)
+        print('outer convergence',  np.linalg.norm( coeff_dir))
 
         force_dir   = smooth(mapping.inject(coeff_dir))
         height_dir  = height_from_force(force_dir)
@@ -241,8 +239,8 @@ def solve_poisson(datamodel):
     edges = np.vstack(edges)
     radius = np.sqrt(util.dot(edges, edges))        #compute target radius at each point
 
-    print 'outer unknowns'
-    print len(radius)
+    print('outer unknowns')
+    print(len(radius))
 
     #pick edges against the sphere. give each edge its own mapping
     mapping = brushes.Mapping(hierachy, edges)
@@ -296,16 +294,16 @@ def solve_poisson(datamodel):
         c = np.linalg.solve(S, r)
 ##        print c
 
-        return lambda I: sum(i*q for i,q in izip(I, c))
+        return lambda I: sum(i*q for i,q in zip(I, c))
 
 
     for i in range(15):  #iterate until convergence
-        print i
+        print(i)
         #scale curves with coef estimates as preconditioner?
         coeff_dir = sample_residual(height) #/ scaling
         coeff_dir = coeff_dir - coeff_dir.mean()   #balance forces; move only in space of valid coefficients
-        print 'outer convergence'
-        print np.linalg.norm( coeff_dir)
+        print('outer convergence')
+        print(np.linalg.norm( coeff_dir))
 
         force_dir   = smooth(mapping.inject(coeff_dir))
         height_dir  = height_from_force(force_dir)
@@ -323,7 +321,7 @@ def solve_poisson(datamodel):
     height = height + res.mean()
 
 
-    print coefficients
+    print(coefficients)
 
 
     if False:

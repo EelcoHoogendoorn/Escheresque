@@ -41,7 +41,7 @@ def triangle_area_from_normals(*edge_planes):
         spherical area enclosed by the input planes
     """
     edge_planes = [util.normalize(ep) for ep in edge_planes ]
-    angles      = [util.dot(edge_planes[p-2], edge_planes[p-1]) for p in xrange(3)] #a3 x [faces, c3]
+    angles      = [util.dot(edge_planes[p-2], edge_planes[p-1]) for p in range(3)] #a3 x [faces, c3]
     areas       = sum(np.arccos(-a) for a in angles) - np.pi                        #faces
     return areas
 
@@ -58,7 +58,7 @@ def triangle_area_from_corners(*tri):
     areas : ndarray, [n], float
         spherical area enclosed by the input corners
     """
-    return triangle_area_from_normals(*[np.cross(tri[v-2], tri[v-1]) for v in xrange(3)])
+    return triangle_area_from_normals(*[np.cross(tri[v-2], tri[v-1]) for v in range(3)])
 
 def triangle_areas_around_center(center, corners):
     """given a triangle formed by corners, and its dual point center,
@@ -75,7 +75,7 @@ def triangle_areas_around_center(center, corners):
         spherical area opposite to each corner
     """
     areas = np.empty(corners.shape[:-1])
-    for i in xrange(3):
+    for i in range(3):
         areas[:,:,i] = triangle_area_from_corners(center, corners[:,:,i-2], corners[:,:,i-1])
     #swivel equilaterals to vonoroi parts
     return (areas.sum(axis=2)[:,:,None]-areas) / 2
@@ -153,7 +153,7 @@ class Geometry(object):
         FEV  = util.gather(topology.FEi, topology.EVi)
 
         #calculate areas; devectorization over e makes things a little more elegant, by avoiding superfluous stacking
-        for e in xrange(3):
+        for e in range(3):
             areas = triangle_area_from_corners(FEVP[:,e,0,:], FEVP[:,e,1,:], self.dual)
             MP2 += areas                    #add contribution to primal face
             util.scatter(                   #add contributions divided over left and right dual face
@@ -163,7 +163,7 @@ class Geometry(object):
 
         #calc edge lengths
         MP1 += edge_length(EVP[:,0,:], EVP[:,1,:])
-        for e in xrange(3):
+        for e in range(3):
             util.scatter(
                 topology.FEi[:,e],
                 edge_length(FEM[:,e,:], self.dual),
@@ -206,21 +206,21 @@ class Geometry(object):
         fine_dual     = fine.dual[central_tris]
         face_edge_mid = util.gather(fine.topology.FV[0::4], fine.primal)
 
-        fine_edge_normal = [np.cross(face_edge_mid[:,i-2,:], face_edge_mid[:,i-1,:]) for i in xrange(3)]
-        fine_edge_mid    = [(face_edge_mid[:,i-2,:] + face_edge_mid[:,i-1,:])/2      for i in xrange(3)]
-        fine_edge_dual   = [np.cross(fine_edge_mid[i], fine_edge_normal[i])          for i in xrange(3)]
+        fine_edge_normal = [np.cross(face_edge_mid[:,i-2,:], face_edge_mid[:,i-1,:]) for i in range(3)]
+        fine_edge_mid    = [(face_edge_mid[:,i-2,:] + face_edge_mid[:,i-1,:])/2      for i in range(3)]
+        fine_edge_dual   = [np.cross(fine_edge_mid[i], fine_edge_normal[i])          for i in range(3)]
         fine_edge_normal = np.array(fine_edge_normal)
         fine_edge_mid    = np.array(fine_edge_mid)
         fine_edge_dual   = np.array(fine_edge_dual)
 
-        coarse_areas     = [triangle_area_from_corners(coarse_dual, face_edge_mid[:,i-2,:], face_edge_mid[:,i-1,:]) for i in xrange(3)]
-        fine_areas       = [triangle_area_from_corners(fine_dual  , face_edge_mid[:,i-2,:], face_edge_mid[:,i-1,:]) for i in xrange(3)]
-        fine_areas       = [(fine_areas[i-2]+fine_areas[i-1])/2 for i in xrange(3)]
+        coarse_areas     = [triangle_area_from_corners(coarse_dual, face_edge_mid[:,i-2,:], face_edge_mid[:,i-1,:]) for i in range(3)]
+        fine_areas       = [triangle_area_from_corners(fine_dual  , face_edge_mid[:,i-2,:], face_edge_mid[:,i-1,:]) for i in range(3)]
+        fine_areas       = [(fine_areas[i-2]+fine_areas[i-1])/2 for i in range(3)]
         coarse_areas     = np.array(coarse_areas)
         fine_areas       = np.array(fine_areas)
 
         #normal of edge midpoints to coarse dual
-        interior_normal = np.array([np.cross(face_edge_mid[:,i,:], coarse_dual) for i in xrange(3)])
+        interior_normal = np.array([np.cross(face_edge_mid[:,i,:], coarse_dual) for i in range(3)])
 
         #the 0-3 index of the overlapping domains
         #biggest of the subtris formed with the coarse dual vertex seems to work; but cant prove why it is so...

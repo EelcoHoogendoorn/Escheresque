@@ -137,7 +137,7 @@ class Curve(object):
         if control: w = np.ones_like(w)
         w = w * N
 
-        for i in xrange(N):
+        for i in range(N):
             P, w = self.Refine(P, w)
         return P
 

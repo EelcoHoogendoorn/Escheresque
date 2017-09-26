@@ -20,7 +20,7 @@ def scatter(idx, vals, target):
 def adjoint(A):
     """compute inverse without division by det; ...xv3xc3 input, or array of matrices assumed"""
     AI = np.empty_like(A)
-    for i in xrange(3):
+    for i in range(3):
         AI[...,i,:] = np.cross(A[...,i-2,:], A[...,i-1,:])
     return AI
 
@@ -57,9 +57,9 @@ def dot(A, B):
 
 def normalize(listofvec):
     """normalize an array of vecs"""
-    norm = np.sqrt(dot(listofvec, listofvec))
+    norm = np.sqrt(dot(listofvec, listofvec))[..., None]
     norm[norm==0] = 1
-    return listofvec / np.expand_dims( norm, -1)
+    return listofvec / norm
 
 
 

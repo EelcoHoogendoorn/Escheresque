@@ -60,12 +60,12 @@ def boundify_normals_numba(complex, old, new):
 ##    perform rotations on the fly
 ##    """
 ##
-##    for b in xrange(len(vertex_index)):                 #loop through boundary vertices
+##    for b in range(len(vertex_index)):                 #loop through boundary vertices
 ##        v = vertex_index[b]                             #get vertex index
-##        for c in xrange(3):                             #loop over components
-##            for i in xrange(domain_index.shape[0]):         #loop over domains involved in this boundary
+##        for c in range(3):                             #loop over components
+##            for i in range(domain_index.shape[0]):         #loop over domains involved in this boundary
 ##                q = 0.0                                     #sum the values over all daomins involved in this boundary
-##                for ii in xrange(domain_index.shape[1]):
+##                for ii in range(domain_index.shape[1]):
 ##                    q += old[v,domain_index[i,ii],c]
 ##                new[v,i,c] = q
 
@@ -99,14 +99,14 @@ def boundify_numba_in(vertex_index, domain_index, old, new):
     """
     apply boundary conditions between domains, where compile time info of all arrays is known
     """
-    for b in xrange(len(vertex_index)):                 #loop through boundary vertices
+    for b in range(len(vertex_index)):                 #loop through boundary vertices
         v = vertex_index[b]                             #get vertex index
         #needs to be pruned for duplicates
-        for i in xrange(domain_index.shape[0]):
+        for i in range(domain_index.shape[0]):
             q = 0.0
-            for ii in xrange(domain_index.shape[1]):    #perform reduction by summing over all domains
+            for ii in range(domain_index.shape[1]):    #perform reduction by summing over all domains
                 q += old[v,domain_index[i,ii]]
-            for ij in xrange(domain_index.shape[1]):    #broadcast to all participants
+            for ij in range(domain_index.shape[1]):    #broadcast to all participants
                 new[v,domain_index[i,ij]] = q
 
 
@@ -117,7 +117,7 @@ def boundify_numba(complex, old):
 
 
     def iter_PMD(vert3, index3, old, new):
-        for v, i in itertools.izip(vert3, index3):     #loop over PMD; somehow slow in numba; seems like static type info is not inferred or used
+        for v, i in zip(vert3, index3):     #loop over PMD; somehow slow in numba; seems like static type info is not inferred or used
             boundify_numba_in(v, i, old, new)
 
     iter_PMD(topology.BE, group.edges   , old, new)   #apply boundary to edges
@@ -134,7 +134,7 @@ def boundify_normals_numba_in(vertex_index, domain_index, domain_transforms, rot
     """
     apply boundary conditions between domains, where compile time info of all arrays is known
     """
-    for b in xrange(len(vertex_index)):                 #loop through boundary vertices
+    for b in range(len(vertex_index)):                 #loop through boundary vertices
         v = vertex_index[b]
 
         for i in range(domain_index.shape[0]):          #loop through constraints
@@ -156,7 +156,7 @@ def boundify_normals_dense_numba(complex, rotated_vertex_normal, old):
     topology = complex.topology
 
     def iter_PMD(vert3, index3, transform3, old, new):
-        for v, i, t in itertools.izip(vert3, index3, transform3):     #loop over PMD; somehow slow in numba; seems like static type info is not inferred or used
+        for v, i, t in zip(vert3, index3, transform3):     #loop over PMD; somehow slow in numba; seems like static type info is not inferred or used
             boundify_normals_numba_in(v, i, t, rotated_vertex_normal, old, new)
 
     iter_PMD(topology.BE, group.edges   , group.transform_edges,    old, new)   #apply boundary to edges
@@ -189,7 +189,7 @@ def vertex_normals_numba(complex, radius):
 
     v_normal = np.zeros((index, vertices, 3), np.float32)
 
-    for i in xrange(index):
+    for i in range(index):
 ##        b = group.basis[i,0,0]
 ##        b = util.normalize(b.T).T
 ##        mirror = np.sign(np.linalg.det(b))
@@ -200,10 +200,10 @@ def vertex_normals_numba(complex, radius):
 ##        tri_normal = np.cross(P[FV[:,1]]-P[FV[:,0]], P[FV[:,2]]-P[FV[:,0]]) * mirror
 
 ##        v_normal = np.zeros_like(P)
-        for t in xrange(len(FV)):
-            for j in xrange(3):
+        for t in range(len(FV)):
+            for j in range(3):
                 v = FV[t,j]
-                for c in xrange(3):
+                for c in range(3):
 ##                    v_normal[i,v,c] += tri_normal[t,c]
                     v_normal[i,v,c] += 1
     return v_normal
@@ -233,7 +233,7 @@ def vertex_normals_python(complex, radius):
     not much use for numba then
     """
     vert_normals = np.empty(complex.shape[::-1]+(3,))
-    for i in xrange(complex.index):
+    for i in range(complex.index):
         tri_normal = triangle_normals(complex, radius, i)
         vert_normals[i] = complex.topology.T02 * tri_normal     #sum all triangle contributions around vertex
     return vert_normals
@@ -247,10 +247,10 @@ def laplace_numba(EV, D1P1, x):
     y = np.zeros_like(x)
     index = x.shape[1]
     edges = len(EV)
-    for e in xrange(edges):
+    for e in range(edges):
         p = EV[e,0]
         m = EV[e,1]
-        for i in xrange(index):
+        for i in range(index):
             d = (x[p,i]-x[m,i]) * D1P1[e]
             y[p,i] = y[p,i] + d
             y[m,i] = y[m,i] - d
@@ -438,12 +438,12 @@ class MultiComplex(object):
         precompute harmonics, for various purposes
         """
         if self.size < 400:     #need at least 360 dofs, so we can handle null symm icosahedral
-            print 'dense'
+            print('dense')
             self.complete_eigen_basis = True
             self.eigenvectors, self.eigenvalues = harmonics.full_eigs(self)
             self.largest = self.eigenvalues[-1]
         else:
-            print 'refine'
+            print('refine')
             self.complete_eigen_basis = False
 
             #compute largest harmonic for determining maximum timestep
@@ -460,9 +460,9 @@ class MultiComplex(object):
             self.smallest = self.eigenvalues[1]
             smallest_multiplier = 1 - self.smallest / self.largest
             self.time_per_iteration = -np.log(smallest_multiplier) / self.smallest
-            print self.time_per_iteration
+            print(self.time_per_iteration)
 
-        print self.eigenvalues[:10]
+        print(self.eigenvalues[:10])
 
     def solve_eigen_d2(self, x, func):
         """

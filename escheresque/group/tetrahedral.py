@@ -69,5 +69,5 @@ class Null(Tetrahedral):
 if False:
     group = ChiralTetrahedral()
 ##    group._vertices()
-    print group.vertices
+    print(group.vertices)
     quit()
