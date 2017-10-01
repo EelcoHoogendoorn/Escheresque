@@ -16,12 +16,6 @@ import itertools
 
 from escheresque.group.group import *
 
-def experimental():
-    from pycomplex import synthetic
-    icosahedron = synthetic.icosahedron()
-    divided = icosahedron.subdivide_fundamental()
-    divided.plot()
-
 
 class Icosahedral(Group):
     """
@@ -51,7 +45,6 @@ class Icosahedral(Group):
         return self.full()
 
 
-
 class ChiralIcosahedral(Icosahedral):
     """
     Chiral Icosahedral symmetry
@@ -64,8 +57,6 @@ class ChiralIcosahedral(Icosahedral):
         return self.chiral()
 
 
-
-
 class Origin(Icosahedral):
     """
     A single reflection through the origin
@@ -76,6 +67,7 @@ class Origin(Icosahedral):
 
     def fundamental_domain(self):
         return self.origin()
+
 
 class Null(Icosahedral):
     """

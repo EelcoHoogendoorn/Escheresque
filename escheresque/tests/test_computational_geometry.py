@@ -64,5 +64,3 @@ def test_triangulation():
     mesh, curve = cg.triangulate(points, curve)
     #add partitioning of points here too?
     partitions = mesh.partition(curve)
-
-test_sphere()

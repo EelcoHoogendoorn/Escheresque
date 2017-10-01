@@ -220,6 +220,7 @@ class Group(object):
                 q = np.dot(t, b)
                 perm[i,j] = np.argmin([np.abs(q-qb).sum() for qb in T])
         return perm
+    
     def relative(self, T):
         """
         find relative transformations; transform that will map one upon other
