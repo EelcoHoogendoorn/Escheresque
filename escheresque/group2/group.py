@@ -1,10 +1,11 @@
 
 from abc import abstractproperty
+from cached_property import cached_property
 
 import numpy as np
 import numpy_indexed as npi
+import scipy.sparse
 import scipy.spatial
-from cached_property import cached_property
 
 
 class Group(object):
@@ -21,7 +22,7 @@ class Group(object):
         """The spherical complex, the fundamental division of which represents the full symmetry group"""
         raise NotImplementedError
 
-    @property
+    @abstractproperty
     def description(self):
         """Orbifold-ish description of the generators of the subgroup"""
         raise NotImplementedError
@@ -32,16 +33,16 @@ class Group(object):
 
     @property
     def n_domains(self):
+        """Order of the full group"""
         return len(self.fundamental_domains.reshape(-1, 3))
 
     @cached_property
     def index(self):
-        """The number of independent tiles in the fundamental domain of the subgroup"""
-        return self.n_domains / self.order
+        """The index of the subgroup; or the number of independent tiles"""
+        return len(self.full_representation / self.representation)
     @cached_property
     def order(self):
-        """Number of transformations; rotations x mirros
-        How often each generator is replicated"""
+        """Number of transformations composing the representation; rotations x mirrors"""
         return len(self.representation)
     @cached_property
     def mirrors(self):
@@ -69,6 +70,10 @@ class Group(object):
         Returns
         -------
         SphericalComplex
+
+        Notes
+        -----
+        triangles are not identical to fundamental domains we seek; contains an orientation-preserving flip!
 
         """
         return self.complex.subdivide_fundamental()
@@ -111,13 +116,25 @@ class Group(object):
 
     @cached_property
     def full_representation(self):
-        """Get a representation of the full group"""
+        """Get a representation of the full group
+
+        Returns
+        -------
+        representation : ndarray, [n_domains, 3, 3], float
+            representation of the full group
+        """
         basis = self.basis_from_domains(self.fundamental_domains)
         return self.transforms_from_basis(basis)
 
     @cached_property
     def representation(self):
-        """Get a representation of the sub-group"""
+        """Get a representation of the sub-group, by parsing the Orbifold description
+
+        Returns
+        -------
+        representation : ndarray, [order, 3, 3], float
+            representation of the sub-group
+        """
         r = self.description
         from escheresque.group2 import generate
         generators = [generate.identity()] + [generate.rotation(self.vertices[i][0], r[i]) for i in range(3)]
@@ -304,13 +321,13 @@ class Group(object):
         def apply_representation(representation, points):
             return np.einsum('onc,vc->ovn', representation, points)
 
-        basis = self.apply_representation(representation, points)
+        basis = apply_representation(representation, points)
         tree = scipy.spatial.cKDTree(points)
         idx = tree.query(basis)[1]
         return idx.astype(np.uint8)
 
     @cached_property
-    def elements_table(self):
+    def elements_tables(self):
         """label elements in the full symmetry group as being in a given orbit,
         as defined by the representation of the group
 
@@ -321,3 +338,53 @@ class Group(object):
             n-th element in the tuple pertains to n-elements
         """
         return tuple([self.table(self.representation, p) for p in self.fundamental_subdivision.primal_position])
+
+    def get_orbits(self, table):
+        """
+
+        Parameters
+        ----------
+        table : ndarray, [order, n_elements], int
+
+        Returns
+        -------
+        n_tiles : int
+        labels : ndarray, [n_elements], int
+        """
+        r, c = np.indices(table.shape)
+        q = table.flatten()
+        d = np.ones_like(q)
+        M = scipy.sparse.coo_matrix((d, (q, c.flatten())))
+        return scipy.sparse.cs_graph_components(M)
+
+    @cached_property
+    def orbits(self):
+        """Compute the orbits of all elements in the subgroup"""
+        return [self.get_orbits(t) for t in self.elements_tables]
+
+    def get_root(self, orbit):
+        """Pick a set of domains as root tiles
+
+        Returns
+        -------
+        ndarray, [n_tiles], int
+        """
+        n_tiles, labels = orbit
+        # orbits = npi.group_by(labels).split_array_as_array(np.arange(len(labels)))[:, 0]
+        # orbits = npi.group_by(labels).first(np.arange(len(labels)))[1]
+        orbits = npi.group_by(labels).split(np.arange(len(labels)))
+        return orbits
+
+    @cached_property
+    def roots(self):
+        return [self.get_root(o) for o in self.orbits]
+
+    @cached_property
+    def structured_transforms(self):
+        """Impose structure on the set of transforms
+
+        Returns
+        -------
+        ndarray, [tiles, rotations, mirrors], int
+
+        """

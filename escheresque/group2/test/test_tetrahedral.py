@@ -55,7 +55,7 @@ def test_basic():
     #     print (v)
     # print (group.fundamental_vertices(representation))
     # print (group.fundamental_edges(representation).shape)
-    tables = group.elements_table(transforms)
+    tables = group.elements_tables(transforms)
     for q in np.split(tables[0], np.cumsum(group.complex.topology.n_elements[:-1]), axis=1):
         assert npi.all_unique(q)
         print(q)

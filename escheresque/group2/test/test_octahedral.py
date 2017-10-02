@@ -12,7 +12,33 @@ def test_sub_representation():
     print(octahedral.ChiralOctahedral().representation.shape)
     print(octahedral.ChiralTetrahedral().representation.shape)
 
-test_sub_representation()
+
+def test_table():
+    group = octahedral.Pyritohedral()
+    tables = group.elements_tables
+
+    table = tables[2]
+    r, c = np.indices(table.shape)
+    import scipy.sparse
+
+    q = table.flatten()
+    d = np.ones_like(q)
+    M = scipy.sparse.coo_matrix((d, (q, c.flatten())))
+    import matplotlib.pyplot as plt
+    n_components, labels = scipy.sparse.cs_graph_components(M)
+    print(n_components)
+    plt.scatter(q, c)
+    plt.show()
+
+
+def test_orbits():
+    group = octahedral.ChiralTetrahedral()
+    orbits = group.orbits
+    # for o in orbits:
+    #     print(o)
+    print(group.roots)
+
+test_orbits()
 quit()
 
 
@@ -73,7 +99,7 @@ def test_basic():
     #     print (v)
     # print (group.fundamental_vertices(representation))
     # print (group.fundamental_edges(representation).shape)
-    tables = group.elements_table(transforms)
+    tables = group.elements_tables(transforms)
     for q in np.split(tables[0], np.cumsum(group.complex.topology.n_elements[:-1]), axis=1):
         assert npi.all_unique(q)
         print(q)
