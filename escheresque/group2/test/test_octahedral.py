@@ -7,10 +7,14 @@ from escheresque.group2 import octahedral
 
 
 def test_sub_representation():
-    print(octahedral.Octahedral().representation.shape)
-    print(octahedral.Pyritohedral().representation.shape)
-    print(octahedral.ChiralOctahedral().representation.shape)
-    print(octahedral.ChiralTetrahedral().representation.shape)
+    print(octahedral.Octahedral().order)
+    print(octahedral.Pyritohedral().order)
+    print(octahedral.ChiralOctahedral().order)
+    print(octahedral.ChiralTetrahedral().order)
+    print(octahedral.Dihedral2().order)
+    print(octahedral.ChiralDihedral2().order)
+    print(octahedral.Origin().order)
+    print(octahedral.Null().order)
 
 
 def test_table():
@@ -38,8 +42,6 @@ def test_orbits():
     #     print(o)
     print(group.roots)
 
-test_orbits()
-quit()
 
 
 def test_basic():
@@ -109,6 +111,3 @@ def test_basic():
     print(tables[2])
     print(orbits[tables[2]])
     print(npi.count(orbits[tables[2]]))
-
-
-test_basic()

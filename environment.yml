@@ -4,14 +4,14 @@ channels:
   - conda-forge
 #  - eelcohoogendoorn
 #  - clinicalgraphics
-  - menpo # fresh mayavi build
+#  - menpo # fresh mayavi build
 dependencies:
   - python = 2
   - numpy
   - numpy-indexed
   - scipy
   - numba
-  - openmesh
+#  - openmesh
   - matplotlib
   - vtk
   - qt = 4
