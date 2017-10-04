@@ -8,8 +8,19 @@ def identity():
 
 
 def mirror():
-    """Mirror generator"""
+    """Mirror generator
+
+    Notes
+    -----
+    This is a reflection through the origin; this works for octahedra, but what about other groups?
+    does not allow us to create a group with a single left-right symmetry only.
+    need more flexible mirror-specification
+    """
     return -identity()
+
+
+def mirror_axis(a):
+    return identity() - 2 * np.outer(a, a)
 
 
 def rotation(a, n):
@@ -21,7 +32,10 @@ def rotation(a, n):
         [ a[2],    0,  -a[0]],
         [-a[1],  a[0],    0],
     ])
-    return np.eye(3) * c + s * skew + (1 - c) * np.outer(a, a)
+    r = np.eye(3) * c + s * skew + (1 - c) * np.outer(a, a)
+    if n < 0:
+        r = r.dot(mirror_axis(a))
+    return r
 
 
 def generate(full_representation, generators):
@@ -45,7 +59,8 @@ def generate(full_representation, generators):
 
     while True:
         new_representation = np.einsum('aij,bjk->abik', generators, representation)
-        idx = tree.query(new_representation.reshape(-1, 9))[1]
+        dist, idx = tree.query(new_representation.reshape(-1, 9))
+        assert np.allclose(dist, 0) # make sure we are still inside the group
         idx = np.unique(idx)
         new_representation = full_representation[idx]
         if len(new_representation) == len(representation):

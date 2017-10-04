@@ -9,9 +9,15 @@ from pycomplex.math import linalg
 
 
 def test_sub_representation():
-    print(icosahedral.Icosahedral().representation.shape)
-    print(icosahedral.ChiralIcosahedral().representation.shape)
-    print(icosahedral.Null().representation.shape)
+    print(icosahedral.Icosahedral().order)
+    print(icosahedral.ChiralIcosahedral().order)
+    print(icosahedral.Dihedral5().order)
+    print(icosahedral.ChiralCyclic5().order)
+    print(icosahedral.Dihedral3().order)
+    print(icosahedral.ChiralDihedral3().order)
+    print(icosahedral.Dihedral2().order)
+    print(icosahedral.ChiralDihedral2().order)
+    print(icosahedral.Null().order)
 test_sub_representation()
 quit()
 

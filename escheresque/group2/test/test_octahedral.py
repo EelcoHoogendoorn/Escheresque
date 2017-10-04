@@ -14,8 +14,10 @@ def test_sub_representation():
     print(octahedral.Dihedral2().order)
     print(octahedral.ChiralDihedral2().order)
     print(octahedral.Origin().order)
+    print(octahedral.TriPlane().order)
+    print(octahedral.Plane().order)
     print(octahedral.Null().order)
-
+test_sub_representation()
 
 def test_table():
     group = octahedral.Pyritohedral()
