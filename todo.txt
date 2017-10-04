@@ -1,0 +1,14 @@
+Do a complete rewrite, making maximum reuse of pycomplex
+
+be very strict about separating ui code; ideally, we get rid of vtk altogether
+
+would like to provide very torough group treatment; exhaustively generate and describe them all
+would like to know all generators of both the subgroup and the the quotient group.
+color cosets and fundamental domains
+
+first milestone would be a passive group viewer without user controls,
+but some simple algos to debug boundary handling, like harmonics / RD
+
+then work towards solid interactivity.
+in most extreme case, can do interface in another language.
+if everything is a subdivision surface, communication could be managable

@@ -222,6 +222,12 @@ class SubGroup(object):
     def quotient(self):
         """Compute a representation of the quotient group"""
 
+    def mirror_group(self):
+        """Representation of the mirror group
+
+        This is a group of either order 1 or 2
+        """
+
     def get_root(self, orbit):
         """Pick a set of domains as root tiles
 
@@ -243,9 +249,11 @@ class SubGroup(object):
     def structured_transforms(self):
         """Impose structure on the set of transforms
 
+        viewed differently; construct the extension / product of the subgroup and the quotient group
+
         Returns
         -------
-        ndarray, [tiles, rotations, mirrors], int
+        ndarray, [index, rotations, mirrors], int
 
         """
 
