@@ -11,12 +11,22 @@ from pycomplex.math import linalg
 def test_sub_representation():
     print(icosahedral.Icosahedral().order)
     print(icosahedral.ChiralIcosahedral().order)
-    print(icosahedral.Dihedral5().order)
+    print(icosahedral.Cyclic5().order)
     print(icosahedral.ChiralCyclic5().order)
-    print(icosahedral.Dihedral3().order)
-    print(icosahedral.ChiralDihedral3().order)
-    print(icosahedral.Dihedral2().order)
-    print(icosahedral.ChiralDihedral2().order)
+    print(icosahedral.Cyclic3().order)
+    print(icosahedral.ChiralCyclic3().order)
+    print(icosahedral.Cyclic2().order)
+    print(icosahedral.ChiralCyclic2().order)
+
+
+    # print(icosahedral.Dihedral5().order)
+    # print(icosahedral.ChiralDihedral5().order)
+    # print(icosahedral.Dihedral3().order)
+    # print(icosahedral.ChiralDihedral3().order)
+
+
+    print(icosahedral.Origin().order)
+    print(icosahedral.Plane().order)
     print(icosahedral.Null().order)
 test_sub_representation()
 quit()

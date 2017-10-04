@@ -1,10 +1,10 @@
 
 from cached_property import cached_property
 
-from escheresque.group2.group import Group, SubGroup
+from escheresque.group2.group import TriangleGroup, SubGroup
 
 
-class DihedralFull(Group):
+class DihedralFull(TriangleGroup):
 
     @cached_property
     def complex(self):

@@ -8,10 +8,14 @@ import scipy.sparse
 import scipy.spatial
 
 
-class Group(object):
+class TriangleGroup(object):
     """Full symmetry group over a triangulated sphere
 
     Primary output of this class is a full representation of all elements in the complete group
+
+    Notes
+    -----
+    polyhedral and dihedral may be seperate subclasses
     """
 
     @abstractproperty
@@ -106,16 +110,27 @@ class Group(object):
 
 
 class SubGroup(object):
-    """Subgroup of a complete symmetry group"""
+    """Subgroup of a complete triangle group"""
 
     @abstractproperty
     def group(self):
-        """full group"""
+        """full triangle group"""
         raise NotImplementedError
 
     @abstractproperty
     def description(self):
-        """Orbifold-ish description of the generators of the subgroup"""
+        """Orbifold-ish description of the generators of the subgroup
+
+        Can see this as a presentation; set of operators on the n-elements of the triangles.
+        integer is the power applied to that given generator to get the identity
+        -1 is a mirror plane along the same axis; extra 4th minus is a mirror in the origin
+
+        what about tet group in octahedral? we have a 3-fold rotation about half the vertices of the cube.
+        do we give up anything by not specifying which elements of the polyhedron form the generators?
+        not much, in all likelihood..
+        need to pick right edge to specify dihedral group on icosahedral
+        also, a plane group on a tet basis requires a mirror on an axis not in primal_position
+        """
         raise NotImplementedError
 
     @cached_property
@@ -149,8 +164,11 @@ class SubGroup(object):
         r = self.description
         from escheresque.group2 import generate
         generators = [generate.identity()] + [generate.rotation(self.group.vertices[i][0], r[i]) for i in range(3)]
-        if r[-1] < 0:
-            generators += [generate.mirror()]
+        if len(r) == 4:
+            if r[-1] < 0:
+                generators += [generate.mirror()]
+            else:
+                raise Exception('can only mirror through the origin')
         return generate.generate(self.group.representation, generators)
 
     def table(self, representation, points):

@@ -8,6 +8,16 @@ from escheresque.group2 import tetrahedral
 from pycomplex.math import linalg
 
 
+def test_sub_representation():
+    print(tetrahedral.Tetrahedral().order)
+    print(tetrahedral.ChiralTetrahedral().order)
+    # print(tetrahedral.Origin().order)
+    print(tetrahedral.Plane().order)
+    print(tetrahedral.Null().order)
+
+test_sub_representation()
+
+
 def test_basic():
     group = tetrahedral.Tetrahedral()
 
@@ -65,5 +75,3 @@ def test_basic():
     print(tables[2])
     print(orbits[tables[2]])
 
-
-test_basic()

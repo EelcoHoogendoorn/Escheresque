@@ -8,8 +8,8 @@ from escheresque.group2 import octahedral
 
 def test_sub_representation():
     print(octahedral.Octahedral().order)
-    print(octahedral.Pyritohedral().order)
     print(octahedral.ChiralOctahedral().order)
+    print(octahedral.Pyritohedral().order)
     print(octahedral.ChiralTetrahedral().order)
     print(octahedral.Dihedral2().order)
     print(octahedral.ChiralDihedral2().order)

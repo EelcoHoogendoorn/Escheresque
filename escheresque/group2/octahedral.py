@@ -1,10 +1,10 @@
 
 from cached_property import cached_property
 
-from escheresque.group2.group import Group, SubGroup
+from escheresque.group2.group import TriangleGroup, SubGroup
 
 
-class OctahedralFull(Group):
+class OctahedralFull(TriangleGroup):
 
     @cached_property
     def complex(self):
