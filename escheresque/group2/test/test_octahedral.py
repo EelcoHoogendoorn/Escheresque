@@ -6,6 +6,11 @@ import numpy_indexed as npi
 from escheresque.group2 import octahedral
 
 
+def test_table():
+    ico = octahedral.OctahedralFull()
+    print(ico.factors)
+
+
 def test_sub_representation():
     print(octahedral.Octahedral().order)
     print(octahedral.ChiralOctahedral().order)

@@ -8,6 +8,17 @@ from escheresque.group2 import tetrahedral
 from pycomplex.math import linalg
 
 
+def test_table():
+    tet = tetrahedral.TetrahedralFull()
+    t = tet.table
+    print(tet.factors)
+    print(t)
+    print(npi.count(tet.element_order))
+    # print(tet.stabilizer_table())
+
+test_table()
+quit()
+
 def test_sub_representation():
     print(tetrahedral.Tetrahedral().order)
     print(tetrahedral.ChiralTetrahedral().order)

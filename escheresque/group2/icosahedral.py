@@ -1,11 +1,10 @@
 
 from cached_property import cached_property
 
-from escheresque.group2.group import TriangleGroup, SubGroup
+from escheresque.group2.group import PolyhedralGroup, SubGroup
 
 
-class IcosahedralFull(TriangleGroup):
-
+class IcosahedralFull(PolyhedralGroup):
     @cached_property
     def complex(self):
         from pycomplex import synthetic
@@ -29,6 +28,13 @@ class ChiralIcosahedral(IcosahedralSubGroup):
     @property
     def description(self):
         return 5, 2, 3
+
+
+class Pyritohedral(IcosahedralSubGroup):
+    @property
+    def description(self):
+        """Can be described as a mirror plane and a 3-fold rotation"""
+        return 1, -1, (2, 3)    # without the (2) to select an alternative triangle, this represents the full group
 
 
 class Cyclic5(IcosahedralSubGroup):
@@ -62,28 +68,25 @@ class ChiralCyclic2(IcosahedralSubGroup):
         return 1, 2, 1
 
 
-# FIXME: dihedral on icosahedral is a pain without ability to refer to specific elements in presentation
-# obviously dihedral exists, but need a two-fold rotation about a specific edge
-# class Dihedral5(IcosahedralSubGroup):
-#     @property
-#     def description(self):
-#         return -10, 2, 1
-#
-# class ChiralDihedral5(IcosahedralSubGroup):
-#     @property
-#     def description(self):
-#         return -10, 2, 1, -1
-#
-# class Dihedral3(IcosahedralSubGroup):
-#     """this order-6 group appears unattainable"""
-#     @property
-#     def description(self):
-#         return 1, 2, -6, -1
-#
-# class ChiralDihedral3(IcosahedralSubGroup):
-#     @property
-#     def description(self):
-#         return 1, 2, 3
+class Dihedral5(IcosahedralSubGroup):
+    @property
+    def description(self):
+        return 5, (20, 2), 1, -1
+
+class ChiralDihedral5(IcosahedralSubGroup):
+    @property
+    def description(self):
+        return 5, (20, 2), 1
+
+class Dihedral3(IcosahedralSubGroup):
+    @property
+    def description(self):
+        return 1, (22, 2), 3, -1
+
+class ChiralDihedral3(IcosahedralSubGroup):
+    @property
+    def description(self):
+        return 1, (22, 2), 3
 
 
 

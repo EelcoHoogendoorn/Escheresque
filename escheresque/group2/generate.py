@@ -25,6 +25,12 @@ def mirror_axis(a):
 
 def rotation(a, n):
     """Rotation generator around axis of order n"""
+    if isinstance(n, tuple):
+        a = a[n[0]]
+        n = n[1]
+    else:
+        a = a[0]
+
     angle = 2 * np.pi / n
     s, c = np.sin(angle), np.cos(angle)
     skew = np.array([

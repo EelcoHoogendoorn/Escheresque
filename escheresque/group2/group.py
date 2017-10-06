@@ -8,7 +8,42 @@ import scipy.sparse
 import scipy.spatial
 
 
-class TriangleGroup(object):
+class Group(object):
+    """abc for group related operations"""
+    @cached_property
+    def order(self):
+        """Number of transformations composing the representation; rotations x mirrors"""
+        return len(self.representation)
+    @cached_property
+    def factors(self):
+        """Number of potential subgroup orders and their index"""
+        n = self.order
+        return np.unique([e for i in range(1, int(n**0.5) + 1) if n % i == 0 for e in (i, n//i)])
+
+    @abstractproperty
+    def representation(self):
+        raise NotImplementedError
+    @abstractproperty
+    def table(self):
+        raise NotImplementedError
+    # def stabilizer_table(self):
+    #     return (self.table == np.arange(self.order)[:, None]).astype(np.uint8)
+    @cached_property
+    def element_order(self):
+        r = self.representation
+        s = r
+        o = np.ones(self.order, np.uint8)
+        for i in range(1, 20):
+            idx = np.linalg.norm(s - np.eye(3), axis=(1,2)) < 1e-3
+            o[np.logical_and(idx, o == 1)] = i
+            s = np.einsum('...ij,...jk->...ik', s, r)
+        return o
+
+    def __eq__(self, other):
+        """Return true if two groups are identical in terms of representation"""
+        return np.array_equiv(self.representation, other.representation)
+
+class TriangleGroup(Group):
     """Full symmetry group over a triangulated sphere
 
     Primary output of this class is a full representation of all elements in the complete group
@@ -19,51 +54,11 @@ class TriangleGroup(object):
     """
 
     @abstractproperty
-    def complex(self):
-        """The spherical complex, the fundamental division of which represents the full symmetry group"""
-        raise NotImplementedError
-
-    @cached_property
-    def order(self):
-        """Number of transformations composing the representation; rotations x mirrors"""
-        return len(self.representation)
-
-    @cached_property
-    def fundamental_domains(self):
-        """Construct fundamental domains of the full symmetry group
-
-        Returns
-        -------
-        ndarray, [n_triangles, 3, 2, 3], int
-            last axis are PMD indices
-
-        """
-        return self.complex.topology.fundamental_domains()
-
-    @cached_property
-    def fundamental_subdivision(self):
-        """
-
-        Returns
-        -------
-        SphericalComplex
-
-        Notes
-        -----
-        triangles are not identical to fundamental domains we seek; contains an orientation-preserving flip!
-
-        """
-        return self.complex.subdivide_fundamental()
-
-    @cached_property
     def vertices(self):
-        """Primal, edge, and dual vertex positions
-
-        Returns
-        -------
-        3-tuple of ndarray, [n_n-elements, 3], float
-        """
-        return self.complex.primal_position
+        raise NotImplementedError
+    @abstractproperty
+    def fundamental_domains(self):
+        raise NotImplementedError
 
     def basis_from_domains(self, domains):
         """Construct corners
@@ -103,13 +98,81 @@ class TriangleGroup(object):
         Returns
         -------
         representation : ndarray, [n_domains, 3, 3], float
-            representation of the full group
+            representation of the full group, in terms of orthonormal matrices
         """
         basis = self.basis_from_domains(self.fundamental_domains)
-        return self.transforms_from_basis(basis)
+        representation = self.transforms_from_basis(basis)
+        assert np.allclose(np.einsum('...ij,...kj->...ik', representation, representation), np.eye(3))
+        return representation
+
+    @cached_property
+    def table(self):
+        """Get Cayley table of the group
+
+        Returns
+        -------
+        table : ndarray, [order, order], uint8
+            how elements of the group combine under multiplication
+            table[i, j] = k means i * j = k
+        """
+        r = self.representation
+        table = np.einsum('nij,mjk->nmik', r, r)
+        tree = scipy.spatial.cKDTree(r.reshape(-1, 9))
+        dist, idx = tree.query(table.reshape(-1, 9))
+        table = idx.reshape(self.order, self.order).astype(np.uint8)
+        assert np.allclose(dist, 0)
+        assert np.alltrue(np.sort(table, axis=0) == np.arange(self.order)[:, None])
+        assert np.alltrue(np.sort(table, axis=1) == np.arange(self.order)[None, :])
+        return table
 
 
-class SubGroup(object):
+class PolyhedralGroup(TriangleGroup):
+    """Everything but dihedral"""
+
+    @abstractproperty
+    def complex(self):
+        """The spherical complex, the fundamental division of which represents the full symmetry group"""
+        raise NotImplementedError
+
+    @cached_property
+    def fundamental_domains(self):
+        """Construct fundamental domains of the full symmetry group
+
+        Returns
+        -------
+        ndarray, [n_triangles, 3, 2, 3], int
+            last axis are PMD indices
+
+        """
+        return self.complex.topology.fundamental_domains()
+
+    @cached_property
+    def fundamental_subdivision(self):
+        """
+
+        Returns
+        -------
+        SphericalComplex
+
+        Notes
+        -----
+        triangles are not identical to fundamental domains we seek; contains an orientation-preserving flip!
+
+        """
+        return self.complex.subdivide_fundamental()
+
+    @cached_property
+    def vertices(self):
+        """Primal, edge, and dual vertex positions
+
+        Returns
+        -------
+        3-tuple of ndarray, [n_n-elements, 3], float
+        """
+        return self.complex.primal_position
+
+
+class SubGroup(Group):
     """Subgroup of a complete triangle group"""
 
     @abstractproperty
@@ -130,6 +193,7 @@ class SubGroup(object):
         not much, in all likelihood..
         need to pick right edge to specify dihedral group on icosahedral
         also, a plane group on a tet basis requires a mirror on an axis not in primal_position
+        same for pyritohedral sym hidden in ico
         """
         raise NotImplementedError
 
@@ -141,10 +205,6 @@ class SubGroup(object):
     def index(self):
         """The index of the subgroup; or the number of independent tiles"""
         return self.group.order / self.order
-    @cached_property
-    def order(self):
-        """Number of transformations composing the representation; rotations x mirrors"""
-        return len(self.representation)
     @cached_property
     def mirrors(self):
         return 2 if self.is_chiral else 1
@@ -163,7 +223,7 @@ class SubGroup(object):
         """
         r = self.description
         from escheresque.group2 import generate
-        generators = [generate.identity()] + [generate.rotation(self.group.vertices[i][0], r[i]) for i in range(3)]
+        generators = [generate.identity()] + [generate.rotation(self.group.vertices[i], r[i]) for i in range(3)]
         if len(r) == 4:
             if r[-1] < 0:
                 generators += [generate.mirror()]
@@ -171,7 +231,7 @@ class SubGroup(object):
                 raise Exception('can only mirror through the origin')
         return generate.generate(self.group.representation, generators)
 
-    def table(self, representation, points):
+    def get_table(self, representation, points):
         """Lookup table of indices, specifying how points transform under the given representation of the group
 
         Parameters
@@ -206,7 +266,7 @@ class SubGroup(object):
             tuple of tables describing how n-elements in the full group map to eachother
             n-th element in the tuple pertains to n-elements
         """
-        return tuple([self.table(self.representation, p) for p in self.fundamental_subdivision.primal_position])
+        return tuple([self.get_table(self.representation, p) for p in self.fundamental_subdivision.primal_position])
 
     def get_orbits(self, table):
         """

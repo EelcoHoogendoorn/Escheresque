@@ -12,6 +12,8 @@ class DihedralFull(TriangleGroup):
         fundamental_domains and vertices
 
         Also, we need an n constructor argument here
+
+        hosohedron would be the right name for this complex
         """
         raise NotImplementedError
 
