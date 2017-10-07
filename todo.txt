@@ -8,6 +8,7 @@ color cosets and fundamental domains
 
 first milestone would be a passive group viewer without user controls,
 but some simple algos to debug boundary handling, like harmonics / RD
+first get a working version without multigrid; try keeping multigrid an entirely orthogonal thing
 
 then work towards solid interactivity.
 in most extreme case, can do interface in another language.

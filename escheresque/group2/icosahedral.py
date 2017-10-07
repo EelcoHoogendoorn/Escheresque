@@ -6,7 +6,7 @@ from escheresque.group2.group import PolyhedralGroup, SubGroup
 
 class IcosahedralFull(PolyhedralGroup):
     @cached_property
-    def complex(self):
+    def polyhedron(self):
         from pycomplex import synthetic
         return synthetic.icosahedron()
 
@@ -34,7 +34,7 @@ class Pyritohedral(IcosahedralSubGroup):
     @property
     def description(self):
         """Can be described as a mirror plane and a 3-fold rotation"""
-        return 1, -1, (2, 3)    # without the (2) to select an alternative triangle, this represents the full group
+        return 1, -1, (2, 3), -1    # without the (2) to select an alternative triangle, this represents the full group
 
 
 class Cyclic5(IcosahedralSubGroup):
@@ -87,6 +87,16 @@ class ChiralDihedral3(IcosahedralSubGroup):
     @property
     def description(self):
         return 1, (22, 2), 3
+
+class Dihedral2(IcosahedralSubGroup):
+    @property
+    def description(self):
+        return 1, -1, 1, -1
+#
+# class ChiralDihedral2(IcosahedralSubGroup):
+#     @property
+#     def description(self):
+#         return 1, -2, 1
 
 
 

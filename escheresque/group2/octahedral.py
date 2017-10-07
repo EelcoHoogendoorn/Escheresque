@@ -7,7 +7,7 @@ from escheresque.group2.group import PolyhedralGroup, SubGroup
 class OctahedralFull(PolyhedralGroup):
 
     @cached_property
-    def complex(self):
+    def polyhedron(self):
         from pycomplex import synthetic
         return synthetic.n_cube_dual(n_dim=3)
 

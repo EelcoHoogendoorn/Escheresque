@@ -232,7 +232,7 @@ class Domain(object):
         return self.parent.datamodel
     @property
     def complex(self):
-        return self.parent.complex
+        return self.parent.polyhedron
 
     def draw(self):
         """
@@ -449,7 +449,7 @@ class PoissonEditor(HasTraits):
         return self.datamodel.hierarchy
     @property
     def complex(self):
-        return self.datamodel.complex
+        return self.datamodel.polyhedron
     @property
     def group(self):
         return self.datamodel.group

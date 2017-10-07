@@ -50,7 +50,7 @@ def solve_poisson_multigrid(datamodel):
 
     coefficients, heightfield = solve_poisson_rec(
         datamodel.hierarchy,
-        datamodel.complex.D2P0 * datamodel.forcefield,
+        datamodel.polyhedron.D2P0 * datamodel.forcefield,
         edges, None)
 
     #final high quality solve?

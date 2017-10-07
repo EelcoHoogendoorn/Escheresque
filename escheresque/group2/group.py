@@ -10,26 +10,99 @@ import scipy.spatial
 
 class Group(object):
     """abc for group related operations"""
-    @cached_property
-    def order(self):
-        """Number of transformations composing the representation; rotations x mirrors"""
-        return len(self.representation)
-    @cached_property
-    def factors(self):
-        """Number of potential subgroup orders and their index"""
-        n = self.order
-        return np.unique([e for i in range(1, int(n**0.5) + 1) if n % i == 0 for e in (i, n//i)])
 
     @abstractproperty
     def representation(self):
+        """The representation of the full group
+
+        Returns
+        -------
+        representation : ndarray, [order, 3, 3], float
+            representation of the full group, in terms of orthonormal matrices
+        """
         raise NotImplementedError
-    @abstractproperty
+
+    @cached_property
+    def order(self):
+        """Number of elements in the group"""
+        return len(self.representation)
+    @cached_property
+    def factors(self):
+        """Number of potential subgroup orders and their index
+
+        Returns
+        -------
+        ndarray, [n_factors], int
+            sorted list of integer factors
+        """
+        n = self.order
+        return np.unique([e for i in range(1, int(n**0.5) + 1) if n % i == 0 for e in (i, n//i)])
+
+    def compute_table(self, l, r):
+        """Compute a transformation table
+
+        Parameters
+        ----------
+        l : ndarray, [n, 3, 3]
+            a group action representation
+        r : ndarray, [m]
+            elements transformed by the group action
+
+        Returns
+        -------
+        table : ndarray, [n, m], uint8
+            how elements of r transform under the group action l
+            table[i, j] = k means i * j = k
+        """
+        n, m = len(l), len(r)
+        tree = scipy.spatial.cKDTree(r.reshape(m, -1))
+        p = np.einsum('nij,mj...->nmi...', l, r)
+        dist, idx = tree.query(p.reshape(n * m, -1))
+        assert np.allclose(dist, 0), "Not a valid group"
+        return idx.reshape(n, m).astype(np.uint8)
+
+    @cached_property
     def table(self):
-        raise NotImplementedError
-    # def stabilizer_table(self):
-    #     return (self.table == np.arange(self.order)[:, None]).astype(np.uint8)
+        """Get Cayley table of the group
+
+        Returns
+        -------
+        table : ndarray, [order, order], uint8
+            how elements of the group combine under multiplication
+            table[i, j] = k means i * j = k
+        """
+        r = self.representation
+        table = self.compute_table(r, r)
+        assert np.alltrue(np.sort(table, axis=0) == np.arange(self.order)[:, None])
+        assert np.alltrue(np.sort(table, axis=1) == np.arange(self.order)[None, :])
+        return table
+
+    @cached_property
+    def inverse_table(self):
+        """Get inverse Cayley table of the group
+
+        Returns
+        -------
+        table : ndarray, [order, order], uint8
+            how elements of the group combine under multiplication
+            table[i, j] = k means i / j = k
+        """
+        r = self.representation
+        table = self.compute_table(r, np.swapaxes(r, -1, -2))
+        assert np.alltrue(np.sort(table, axis=0) == np.arange(self.order)[:, None])
+        assert np.alltrue(np.sort(table, axis=1) == np.arange(self.order)[None, :])
+        return table
+
     @cached_property
     def element_order(self):
+        """Compute the length of the orbit of each element in the group
+
+        Returns
+        -------
+        ndarray, [order], int
+            the power to which each group element needs to be raised individually
+            to map back to the identity element
+        """
         r = self.representation
         s = r
         o = np.ones(self.order, np.uint8)
@@ -43,123 +116,98 @@ class Group(object):
         """Return true if two groups are identical in terms of representation"""
         return np.array_equiv(self.representation, other.representation)
 
+    def multiply(self, l, r):
+        """Combine elements of the group; compute l * r
+
+        Parameters
+        ----------
+        l : ndarray, [...], int
+            group elements
+        r : ndarray, [...], int
+            group elements
+
+        Returns
+        -------
+        e : ndarray, [...], int
+            group elements
+        """
+        l, r = np.asarray(l), np.asarray(r)
+        broadcast = np.broadcast(l, r)
+        ones = np.ones(broadcast.shape, dtype=np.uint8)
+        return self.table[
+            np.asarray(l*ones).flatten(),
+            np.asarray(r*ones).flatten()].reshape(broadcast.shape)
+
+    def divide(self, l, r):
+        """Combine elements of the group; compute l / r
+
+        Parameters
+        ----------
+        l : ndarray, [...], int
+            group elements
+        r : ndarray, [...], int
+            group elements
+
+        Returns
+        -------
+        e : ndarray, [...], int
+            group elements
+        """
+        l, r = np.asarray(l), np.asarray(r)
+        broadcast = np.broadcast(l, r)
+        ones = np.ones(broadcast.shape, dtype=np.uint8)
+        return self.inverse_table[
+            np.asarray(l*ones).flatten(),
+            np.asarray(r*ones).flatten()].reshape(broadcast.shape)
+
+
 class TriangleGroup(Group):
-    """Full symmetry group over a triangulated sphere
-
-    Primary output of this class is a full representation of all elements in the complete group
-
-    Notes
-    -----
-    polyhedral and dihedral may be seperate subclasses
-    """
+    """Full symmetry group over a triangulated sphere"""
 
     @abstractproperty
     def vertices(self):
+        """3-tuple of ndarray"""
         raise NotImplementedError
-    @abstractproperty
-    def fundamental_domains(self):
-        raise NotImplementedError
-
-    def basis_from_domains(self, domains):
-        """Construct corners
-
-        Parameters
-        ----------
-        domains : ndarray, [..., 3], int
-            domains given as pmd corners
-
-        Returns
-        -------
-        basis : ndarray, [..., 3, 3], float
-            last axis are spatial coordinates,
-            second to last are pmd corners
-        """
-        return np.concatenate([self.vertices[i][domains[..., None, i]] for i in range(3)], axis=-2)
-
-    def transforms_from_basis(self, basis):
-        """Generate all linear transforms, from one basis to another
-
-        Parameters
-        ----------
-        basis : ndarray, [n_domains, 3, 3], float
-
-        Returns
-        -------
-        transforms : ndarray, [n_domains, 3, 3], float
-            transform mapping element
-        """
-        basis = basis.reshape(-1, 3, 3)
-        return np.linalg.solve(basis[0], basis)
-
-    @cached_property
-    def representation(self):
-        """Get a representation of the full group
-
-        Returns
-        -------
-        representation : ndarray, [n_domains, 3, 3], float
-            representation of the full group, in terms of orthonormal matrices
-        """
-        basis = self.basis_from_domains(self.fundamental_domains)
-        representation = self.transforms_from_basis(basis)
-        assert np.allclose(np.einsum('...ij,...kj->...ik', representation, representation), np.eye(3))
-        return representation
-
-    @cached_property
-    def table(self):
-        """Get Cayley table of the group
-
-        Returns
-        -------
-        table : ndarray, [order, order], uint8
-            how elements of the group combine under multiplication
-            table[i, j] = k means i * j = k
-        """
-        r = self.representation
-        table = np.einsum('nij,mjk->nmik', r, r)
-        tree = scipy.spatial.cKDTree(r.reshape(-1, 9))
-        dist, idx = tree.query(table.reshape(-1, 9))
-        table = idx.reshape(self.order, self.order).astype(np.uint8)
-        assert np.allclose(dist, 0)
-        assert np.alltrue(np.sort(table, axis=0) == np.arange(self.order)[:, None])
-        assert np.alltrue(np.sort(table, axis=1) == np.arange(self.order)[None, :])
-        return table
-
-
-class PolyhedralGroup(TriangleGroup):
-    """Everything but dihedral"""
 
     @abstractproperty
     def complex(self):
-        """The spherical complex, the fundamental division of which represents the full symmetry group"""
+        raise NotImplementedError
+
+    @abstractproperty
+    def triangles(self):
+        """Mobius triangles in terms of pmd indices"""
         raise NotImplementedError
 
     @cached_property
-    def fundamental_domains(self):
-        """Construct fundamental domains of the full symmetry group
-
-        Returns
-        -------
-        ndarray, [n_triangles, 3, 2, 3], int
-            last axis are PMD indices
-
-        """
-        return self.complex.topology.fundamental_domains()
+    def n_elements(self):
+        return [len(v) for v in self.vertices]
 
     @cached_property
-    def fundamental_subdivision(self):
-        """
+    def basis(self):
+        return self.complex.vertices[self.complex.topology.elements[2]]
+
+    @cached_property
+    def representation(self):
+        """The representation of the full group
 
         Returns
         -------
-        SphericalComplex
-
-        Notes
-        -----
-        triangles are not identical to fundamental domains we seek; contains an orientation-preserving flip!
-
+        representation : ndarray, [order, 3, 3], float
+            representation of the full group, in terms of orthonormal matrices
         """
-        return self.complex.subdivide_fundamental()
+        basis = self.basis
+        representation = np.linalg.solve(basis[0], basis)
+        assert np.allclose(np.einsum('...ij,...kj->...ik', representation, representation), np.eye(3))
+        return representation
+
+
+class PolyhedralGroup(TriangleGroup):
+    """TriangleGroup built from a regular polyhedron."""
+
+    @abstractproperty
+    def polyhedron(self):
+        """The spherical complex, the fundamental division of which represents the full symmetry group"""
+        raise NotImplementedError
 
     @cached_property
     def vertices(self):
@@ -169,7 +217,30 @@ class PolyhedralGroup(TriangleGroup):
         -------
         3-tuple of ndarray, [n_n-elements, 3], float
         """
-        return self.complex.primal_position
+        return self.polyhedron.primal_position
+
+    @cached_property
+    def complex(self):
+        """
+
+        Returns
+        -------
+        SphericalComplex
+
+        """
+        return self.polyhedron.subdivide_fundamental(oriented=False)
+
+    @cached_property
+    def triangles(self):
+        """Fundamental domain triangles
+
+        Returns
+        -------
+        ndarray, [order, 3], int
+            last axis are PMD indices
+
+        """
+        return self.polyhedron.topology.fundamental_domains().reshape(-1, 3)
 
 
 class SubGroup(Group):
@@ -231,30 +302,6 @@ class SubGroup(Group):
                 raise Exception('can only mirror through the origin')
         return generate.generate(self.group.representation, generators)
 
-    def get_table(self, representation, points):
-        """Lookup table of indices, specifying how points transform under the given representation of the group
-
-        Parameters
-        ----------
-        representation : ndarray, [n_transforms, 3, 3], float
-        points : ndarray, [n_points, 3], float
-
-        Returns
-        -------
-        ndarray, [n_transforms, n_points], uint8
-            indices into points
-            table describing how points map to eachother
-
-        """
-
-        def apply_representation(representation, points):
-            return np.einsum('onc,vc->ovn', representation, points)
-
-        basis = apply_representation(representation, points)
-        tree = scipy.spatial.cKDTree(points)
-        idx = tree.query(basis)[1]
-        return idx.astype(np.uint8)
-
     @cached_property
     def elements_tables(self):
         """label elements in the full symmetry group as being in a given orbit,
@@ -262,11 +309,15 @@ class SubGroup(Group):
 
         Returns
         -------
-        3-tuple of ndarray, [order, n_elements], int
+        3-tuple of ndarray, [order, complex.n_elements], int
             tuple of tables describing how n-elements in the full group map to eachother
             n-th element in the tuple pertains to n-elements
         """
-        return tuple([self.get_table(self.representation, p) for p in self.fundamental_subdivision.primal_position])
+        return tuple([self.compute_table(self.representation, p) for p in self.group.complex.primal_position])
+
+    @cached_property
+    def table(self):
+        return self.elements_tables[2]
 
     def get_orbits(self, table):
         """
@@ -335,3 +386,21 @@ class SubGroup(Group):
 
         """
 
+    def pick(self, points):
+        """Pick the subgroup
+
+        Parameters
+        ----------
+        points : ndarray, [n_points, 3], float
+
+        Returns
+        -------
+        element : ndarray, [n_points], int
+            picked subgroup element
+        index : ndarray, [n_points], int
+            picked quotient group element
+        bary : ndarray, [n_points, 3], float
+            pmd barycentric coordinates
+        """
+        domains, bary = self.group.complex.pick_primal(points)
+        raise NotImplementedError('decompose domains into sub and quotient')

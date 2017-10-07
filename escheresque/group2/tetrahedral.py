@@ -7,7 +7,7 @@ from escheresque.group2.group import PolyhedralGroup, SubGroup
 class TetrahedralFull(PolyhedralGroup):
 
     @cached_property
-    def complex(self):
+    def polyhedron(self):
         from pycomplex import synthetic
         return synthetic.n_simplex(n_dim=3).as_spherical().boundary
 

@@ -73,7 +73,7 @@ class ThreadedRDAction(Thread):
         self.callback = callback
 
         from ..reaction_diffusion import ReactionDiffusion
-        self.rd = ReactionDiffusion(datamodel.complex)
+        self.rd = ReactionDiffusion(datamodel.polyhedron)
         try:
             self.rd.coeff = self.rd.params[self.interface.reaction_selected]
         except:
@@ -87,7 +87,7 @@ class ThreadedRDAction(Thread):
 ##            from scipy.sparse import csr_matrix
 ##            csr_matrix(np.eye(3))
             self.rd.simulate(30)
-            self.datamodel.heightfield = self.rd.state[1].reshape(self.datamodel.complex.shape)
+            self.datamodel.heightfield = self.rd.state[1].reshape(self.datamodel.polyhedron.shape)
 
             GUI.invoke_later(self.callback)
             step += 1
@@ -128,7 +128,7 @@ class Domain(object):
         return self.parent.datamodel
     @property
     def complex(self):
-        return self.parent.complex
+        return self.parent.polyhedron
 
     def draw(self):
         """
@@ -330,7 +330,7 @@ class HeightEditor(HasTraits):
         return self.datamodel.hierarchy
     @property
     def complex(self):
-        return self.datamodel.complex
+        return self.datamodel.polyhedron
     @property
     def group(self):
         return self.datamodel.group
