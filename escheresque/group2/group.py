@@ -461,6 +461,8 @@ class SubGroup(Group):
         Returns
         -------
         sub_idx : ndarray, [n_points], int
+            picked group element
+        sub_idx : ndarray, [n_points], int
             picked subgroup element
         quotient_idx : ndarray, [n_points], int
             picked quotient group element
@@ -469,4 +471,4 @@ class SubGroup(Group):
         """
         elements_idx, bary = self.group.pick(points)
         sub_idx, quotient_idx = self.find_element(elements_idx)
-        return sub_idx, quotient_idx, bary
+        return elements_idx, sub_idx, quotient_idx, bary

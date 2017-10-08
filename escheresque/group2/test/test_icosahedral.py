@@ -72,14 +72,14 @@ def test_pick():
     points = np.concatenate([points, z[..., None]], axis=-1)
 
 
-    sub_idx, quotient_idx, bary = group.pick(points.reshape(-1, 3))
+    element_idx, sub_idx, quotient_idx, bary = group.pick(points.reshape(-1, 3))
 
 
     if False:
         col = bary
     else:
         col = np.array([
-            sub_idx.astype(np.float) / sub_idx.max()*0,
+            sub_idx.astype(np.float) / sub_idx.max(),
             sub_idx * 0,
             quotient_idx.astype(np.float) / quotient_idx.max()
         ]).T

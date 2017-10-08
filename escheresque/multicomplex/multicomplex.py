@@ -40,12 +40,12 @@ class MultiComplex(object):
         bary : ndarray, [n_points, 3], float
             barycentric coordinates into triangle
         """
-        element, index, bary = self.group.pick(points)
+        element, sub, quotient, bary = self.group.pick(points)
         # transform all points onto the schwartz triangle
-        points = np.einsum('nji,njk->nik', self.group.representation[element], points)
+        points = np.einsum('nji,nj->ni', self.group.group.representation[element], points)
         # pick the schwartz triangle
         triangle, bary = self.triangle.pick_primal(points)
-        return element, index, triangle, bary
+        return element, sub, quotient, triangle, bary
 
     @property
     def index(self):
