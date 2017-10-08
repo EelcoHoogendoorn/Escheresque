@@ -36,9 +36,20 @@ class DihedralFull(TriangleGroup):
 
 
 class DihedralSubGroup(SubGroup):
+    def __init__(self, n):
+        self.n = n
 
     @cached_property
     def group(self):
-        """need n constructor argument here"""
-        return DihedralFull()
+        return DihedralFull(self.n)
 
+
+class ChiralDihedral(DihedralSubGroup):
+    @property
+    def description(self):
+        return self.n, 2, 1
+
+class Cyclic(DihedralSubGroup):
+    @property
+    def description(self):
+        return self.n, 1, 1

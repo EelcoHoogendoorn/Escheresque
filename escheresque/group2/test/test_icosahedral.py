@@ -3,9 +3,9 @@ import numpy as np
 import numpy.testing as npt
 import numpy_indexed as npi
 
-from escheresque.group2 import icosahedral
+import matplotlib.pyplot as plt
 
-from pycomplex.math import linalg
+from escheresque.group2 import icosahedral
 
 
 def test_table():
@@ -48,16 +48,48 @@ def test_sub_representation():
 # quit()
 
 def test_basic():
-    group = icosahedral.Icosahedral()
+    group = icosahedral.Pyritohedral()
+    full = group.group
 
-    npt.assert_allclose(np.linalg.norm(group.group.complex.vertices, axis=-1), 1.0)
+    tables = group.elements_tables
 
-    v = group.elements_tables
-    print(v[0])
-    # for q in np.split(v, np.cumsum(group.complex.topology.n_elements[:-1]), axis=1):
-    #     assert npi.all_unique(q)
-    #     print(q)
+    # print(tables[0])
+    # print(tables[1])
+    # print(tables[2])
+
+    print(group.product_idx)
+    print(full.orientation[group.product_idx.T])
 
 
+def test_pick():
+    group = icosahedral.Pyritohedral()
+    full = group.group
 
-test_basic()
+    from pycomplex.math import linalg
+    N = 128
+    points = np.moveaxis(np.indices((N, N)).astype(np.float), 0, -1) / (N - 1) * 2 - 1
+    z = np.sqrt(np.clip(1 - linalg.dot(points, points), 0, 1))
+    points = np.concatenate([points, z[..., None]], axis=-1)
+
+
+    sub_idx, quotient_idx, bary = group.pick(points.reshape(-1, 3))
+
+
+    if False:
+        col = bary
+    else:
+        col = np.array([
+            sub_idx.astype(np.float) / sub_idx.max()*0,
+            sub_idx * 0,
+            quotient_idx.astype(np.float) / quotient_idx.max()
+        ]).T
+
+
+    plt.figure()
+    img = np.flip(np.moveaxis(col.reshape(N, N, 3), 0, 1), axis=0)
+    # img = (img * 255).astype(np.uint8)
+    plt.imshow(img)
+
+    plt.show()
+
+test_pick()

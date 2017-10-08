@@ -47,7 +47,7 @@ def test_orbits():
     orbits = group.orbits
     # for o in orbits:
     #     print(o)
-    print(group.roots)
+    print(group.cosets)
 
 
 

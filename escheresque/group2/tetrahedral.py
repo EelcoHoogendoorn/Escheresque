@@ -13,7 +13,6 @@ class TetrahedralFull(PolyhedralGroup):
 
 
 class TetrahedralSubGroup(SubGroup):
-
     @cached_property
     def group(self):
         return TetrahedralFull()

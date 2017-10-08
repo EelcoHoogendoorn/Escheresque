@@ -26,6 +26,11 @@ class Group(object):
     def order(self):
         """Number of elements in the group"""
         return len(self.representation)
+
+    def __eq__(self, other):
+        """Return true if two groups are identical in terms of representation"""
+        return np.array_equiv(self.representation, other.representation)
+
     @cached_property
     def factors(self):
         """Number of potential subgroup orders and their index
@@ -38,6 +43,17 @@ class Group(object):
         n = self.order
         return np.unique([e for i in range(1, int(n**0.5) + 1) if n % i == 0 for e in (i, n//i)])
 
+    @cached_property
+    def orientation(self):
+        """Get the orientation of all elements in the group
+
+        Returns
+        -------
+        ndarray, [order], {-1, +1}
+            encodes if the given elements represents a mirror
+        """
+        return np.sign(np.linalg.det(self.representation)).astype(np.int8)
+
     def compute_table(self, l, r):
         """Compute a transformation table
 
@@ -45,8 +61,8 @@ class Group(object):
         ----------
         l : ndarray, [n, 3, 3]
             a group action representation
-        r : ndarray, [m]
-            elements transformed by the group action
+        r : ndarray, [m, ...]
+            elements to be transformed by the group action
 
         Returns
         -------
@@ -112,10 +128,6 @@ class Group(object):
             s = np.einsum('...ij,...jk->...ik', s, r)
         return o
 
-    def __eq__(self, other):
-        """Return true if two groups are identical in terms of representation"""
-        return np.array_equiv(self.representation, other.representation)
-
     def multiply(self, l, r):
         """Combine elements of the group; compute l * r
 
@@ -175,7 +187,7 @@ class TriangleGroup(Group):
 
     @abstractproperty
     def triangles(self):
-        """Mobius triangles in terms of pmd indices"""
+        """Mobius triangles, or fundamental domains, in terms of pmd indices"""
         raise NotImplementedError
 
     @cached_property
@@ -184,7 +196,7 @@ class TriangleGroup(Group):
 
     @cached_property
     def basis(self):
-        return self.complex.vertices[self.complex.topology.elements[2]]
+        return self.complex.vertices[self.complex.topology.elements[-1]]
 
     @cached_property
     def representation(self):
@@ -198,7 +210,24 @@ class TriangleGroup(Group):
         basis = self.basis
         representation = np.linalg.solve(basis[0], basis)
         assert np.allclose(np.einsum('...ij,...kj->...ik', representation, representation), np.eye(3))
-        return representation
+        return np.swapaxes(representation, 1, 2)
+
+    def pick(self, points):
+        """Pick the full group
+
+        Parameters
+        ----------
+        points : ndarray, [n_points, 3], float
+
+        Returns
+        -------
+        element_idx : ndarray, [n_points], int
+            picked group element
+        bary : ndarray, [n_points, 3], float
+            pmd barycentric coordinates
+        """
+        # weighted is false, since complex need not be oriented, and is symmetric
+        return self.complex.pick_primal(points, weighted=False)
 
 
 class PolyhedralGroup(TriangleGroup):
@@ -264,7 +293,6 @@ class SubGroup(Group):
         not much, in all likelihood..
         need to pick right edge to specify dihedral group on icosahedral
         also, a plane group on a tet basis requires a mirror on an axis not in primal_position
-        same for pyritohedral sym hidden in ico
         """
         raise NotImplementedError
 
@@ -285,12 +313,16 @@ class SubGroup(Group):
 
     @cached_property
     def representation(self):
-        """Get a representation of the sub-group, by parsing the Orbifold description
+        """Get a representation of the sub-group, by parsing the Orbifold description / presentation
 
         Returns
         -------
         representation : ndarray, [order, 3, 3], float
             representation of the sub-group in terms of orthonormal matrices
+
+        Notes
+        -----
+        perhaps cleaner to return representation_idx here
         """
         r = self.description
         from escheresque.group2 import generate
@@ -304,12 +336,12 @@ class SubGroup(Group):
 
     @cached_property
     def elements_tables(self):
-        """label elements in the full symmetry group as being in a given orbit,
+        """label topological elements in the full symmetry group as being in a given orbit,
         as defined by the representation of the group
 
         Returns
         -------
-        3-tuple of ndarray, [order, complex.n_elements], int
+        3-tuple of ndarray, [order, complex.n_n-elements], int
             tuple of tables describing how n-elements in the full group map to eachother
             n-th element in the tuple pertains to n-elements
         """
@@ -329,9 +361,9 @@ class SubGroup(Group):
         Returns
         -------
         index : int
+            number of independent cosets
         labels : ndarray, [n_elements], int
             all elements with the same label from a coset
-            the number of independent cosets is the index of the subgroup
 
         Notes
         -----
@@ -348,16 +380,7 @@ class SubGroup(Group):
         """Compute the orbits of all elements in the subgroup"""
         return [self.get_orbits(t) for t in self.elements_tables]
 
-    def quotient(self):
-        """Compute a representation of the quotient group"""
-
-    def mirror_group(self):
-        """Representation of the mirror group
-
-        This is a group of either order 1 or 2
-        """
-
-    def get_root(self, orbit):
+    def get_coset(self, orbit):
         """Pick a set of domains as root tiles
 
         Returns
@@ -365,26 +388,68 @@ class SubGroup(Group):
         ndarray, [n_tiles], int
         """
         n_tiles, labels = orbit
-        # orbits = npi.group_by(labels).split_array_as_array(np.arange(len(labels)))[:, 0]
-        # orbits = npi.group_by(labels).first(np.arange(len(labels)))[1]
         cosets = npi.group_by(labels).split(np.arange(len(labels)))
         return cosets
 
     @cached_property
-    def roots(self):
-        return [self.get_root(o) for o in self.orbits]
+    def cosets(self):
+        return [self.get_coset(o) for o in self.orbits]
 
     @cached_property
-    def structured_transforms(self):
-        """Impose structure on the set of transforms
-
-        viewed differently; construct the extension / product of the subgroup and the quotient group
+    def quotient_idx(self):
+        """Compute a representation of the quotient group
 
         Returns
         -------
-        ndarray, [index, rotations, mirrors], int
-
+        ndarray, [index], int
+            elements of full group that make up the quotient group
         """
+        return self.cosets[-1][:, 0]
+
+    @cached_property
+    def sub_idx(self):
+        """Compute a representation of the sub group
+
+        Returns
+        -------
+        ndarray, [order], int
+            elements of full group that make up the quotient group
+        """
+        sub_idx = self.cosets[-1][0, :]
+        assert np.array_equiv(self.representation, self.group.representation[sub_idx])
+        return sub_idx
+
+    @cached_property
+    def product_idx(self):
+        """Construct product group
+
+        Returns
+        -------
+        ndarray, [order, index], int
+            all elements of full group,
+            expressed as a product of subgroup and quotient group
+        """
+        product = self.group.multiply(
+            self.sub_idx[:, None],
+            self.quotient_idx[None, :],
+        )
+        assert npi.all_unique(product, axis=None)
+        return product
+
+    def unravel(self, idx):
+        """Convert full group element index to quotient/subgroup pair"""
+        return np.unravel_index(idx, self.product_idx.shape)
+    def ravel(self, idx):
+        """Convert index/subgroup pair to full group element"""
+        return np.ravel_multi_index(idx, self.product_idx.shape)
+
+    @cached_property
+    def find_element_cache(self):
+        return np.argsort(self.product_idx.flatten())
+    def find_element(self, e):
+        """Find elements """
+        idx = self.find_element_cache[e]
+        return self.unravel(idx)
 
     def pick(self, points):
         """Pick the subgroup
@@ -395,12 +460,13 @@ class SubGroup(Group):
 
         Returns
         -------
-        element : ndarray, [n_points], int
+        sub_idx : ndarray, [n_points], int
             picked subgroup element
-        index : ndarray, [n_points], int
+        quotient_idx : ndarray, [n_points], int
             picked quotient group element
         bary : ndarray, [n_points, 3], float
             pmd barycentric coordinates
         """
-        domains, bary = self.group.complex.pick_primal(points)
-        raise NotImplementedError('decompose domains into sub and quotient')
+        elements_idx, bary = self.group.pick(points)
+        sub_idx, quotient_idx = self.find_element(elements_idx)
+        return sub_idx, quotient_idx, bary

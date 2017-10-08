@@ -30,12 +30,17 @@ def test_sub_representation():
 
 
 def test_basic():
-    group = tetrahedral.Tetrahedral()
+    group = tetrahedral.ChiralTetrahedral()
+    full = group.group
 
     tables = group.elements_tables
 
     print(tables[0])
     print(tables[1])
     print(tables[2])
+
+    print(group.product_idx)
+    print(np.sign(np.linalg.det(group.group.representation[group.product_idx])))
+
 
 test_basic()
