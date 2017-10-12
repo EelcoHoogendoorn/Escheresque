@@ -6,14 +6,11 @@ from escheresque.group2.octahedral import Pyritohedral
 from escheresque.multicomplex.triangle import Schwartz
 
 
-
 def test_generate():
     group = Pyritohedral()
     triangle = Schwartz.from_group(group.group)
     triangle.plot()
     plt.show()
-
-# test_generate()
 
 
 def test_normals():
@@ -27,4 +24,14 @@ def test_normals():
     triangle.plot()
     plt.show()
 
-test_normals()
+
+def test_boundary_edge():
+    group = Pyritohedral()
+    triangle = Schwartz.from_group(group.group)
+    for i in range(4):
+        triangle = triangle.subdivide()
+    print(triangle.boundary_edges)
+    print(triangle.boundary_vertices)
+    print(triangle.boundary_edge_vertices)
+
+

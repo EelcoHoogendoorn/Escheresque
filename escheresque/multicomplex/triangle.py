@@ -1,5 +1,8 @@
 
 import numpy as np
+import numpy_indexed as npi
+from cached_property import cached_property
+
 from pycomplex.complex.simplicial.spherical import ComplexSpherical2
 from pycomplex.geometry.euclidian import segment_normals
 
@@ -15,10 +18,12 @@ class Schwartz(ComplexSpherical2):
         ----------
         group : TriangleGroup
         """
-        return Schwartz(
+        triangle = Schwartz(
             vertices=group.basis[0],
             simplices=[[0, 1, 2]]
         )
+        triangle.group = group
+        return triangle
 
     def subdivide(self):
         """
@@ -30,7 +35,77 @@ class Schwartz(ComplexSpherical2):
         fine = self.subdivide_loop()
         fine.parent = self
         self.child = fine
+        fine.group = self.group
         return fine
+
+    @cached_property
+    def boundary_vertices_chain(self):
+        """Compute membership of pmd vertices
+
+        Returns
+        -------
+        ndarray, [n_vertices, 3], int
+            chain indicating membership in pmd vertex
+        """
+        try:
+            return self.topology.transfer_matrices[0] * self.parent.boundary_vertices_chain
+        except:
+            return np.eye(3, dtype=np.int8)
+
+    @cached_property
+    def boundary_edges_chain(self):
+        """Compute membership of pmd edges
+
+        Returns
+        -------
+        ndarray, [n_edges, 3], int
+            chain indicating membership in pmd edge
+        """
+        try:
+            return self.topology.transfer_matrices[1] * self.parent.boundary_edges_chain
+        except:
+            return np.eye(3, dtype=np.int8)
+
+    @cached_property
+    def boundary_edge_vertices_chain(self):
+        """edge vertices minus corners"""
+        return np.logical_and(
+            (np.abs(self.topology.matrix(0, 1)) * self.boundary_edges_chain) > 0,
+            np.logical_not(np.any(self.boundary_vertices_chain, axis=1, keepdims=True))
+        ).astype(np.int8)
+
+    @cached_property
+    def boundary_vertices(self):
+        """
+
+        Returns
+        -------
+        ndarray : [3, 1], int
+        """
+        r, c = np.nonzero(self.boundary_vertices_chain)
+        return npi.group_by(c).split_array_as_array(r)
+
+    @cached_property
+    def boundary_edges(self):
+        """
+
+        Returns
+        -------
+        ndarray, [3, 2**level], int
+        """
+        r, c = np.nonzero(self.boundary_edges_chain)
+        return npi.group_by(c).split_array_as_array(r)
+
+    @cached_property
+    def boundary_edge_vertices(self):
+        """
+
+        Returns
+        -------
+        ndarray, [3, 2**level-1], int
+        """
+        r, c = np.nonzero(self.boundary_edge_vertices_chain)
+        return npi.group_by(c).split_array_as_array(r)
 
     def triangle_normals(self, radius):
         """Compute triangle normals

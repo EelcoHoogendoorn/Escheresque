@@ -32,8 +32,10 @@ class MultiComplex(object):
         Returns
         -------
         element : ndarray, [n_points], int
-            picked subgroup element
-        index : ndarray, [n_points], int
+            picked group element
+        sub : ndarray, [n_points], int
+            picked sub group element
+        quotient : ndarray, [n_points], int
             picked quotient group element
         triangle : ndarray, [n_points], int
             picked triangle index
@@ -41,7 +43,7 @@ class MultiComplex(object):
             barycentric coordinates into triangle
         """
         element, sub, quotient, bary = self.group.pick(points)
-        # transform all points onto the schwartz triangle
+        # transform all points back onto the schwartz triangle
         points = np.einsum('nji,nj->ni', self.group.group.representation[element], points)
         # pick the schwartz triangle
         triangle, bary = self.triangle.pick_primal(points)
@@ -111,3 +113,67 @@ class MultiComplex(object):
             child.parent = parent
             hierarchy.append(child)
         return hierarchy
+
+    # def grad(self):
+    #     """gradient operator, from p0 to p1 forms"""
+    #     T01 = self.triangle.topology.matrices[0]
+    #     def inner(x):
+    #         return T01 * x
+    #     return inner
+    #
+    # def div(self):
+    #     """divergence operator, from d1 to d2 forms"""
+    #     T01 = self.triangle.topology.matrices[0]
+    #     def inner(x):
+    #         return T01.T * x
+    #     return inner
+    #
+    # @cached_property
+    # def laplace(self):
+    #     """Laplace from """
+    #     T01 = self.triangle.topology.matrices[0]
+    #     return T01.T *
+    # @cached_property
+    # def hodge_DP(self):
+    #     """Compute boundified hodges;
+    #     make elements act as their symmetry-completed counterparts
+    #
+    #     For d1p1, this means adding opposing d1 edge
+    #     for p0d2, this means summing over all
+    #     """
+    def boundify_d2(self, d2):
+        """sum over all neighbors and divide by multiplicity"""
+
+    @cached_property
+    def boundifier(self):
+        """Compute sparse matrix that applies boundification
+
+        that is, averaging over d2 values
+        implement as matrix-multiply?
+        boundified = boundifier * unboundified
+        or:
+        boundified = unboundified - boundifier * unboundified
+        last is better since most values should remain untouched
+        does not help much with
+        """
+
+    @cached_property
+    def boundary_info(self):
+        """Return terms describing how the triangle boundary stitches together
+
+        Returns
+        -------
+        vertices : ndarray, [index, n_terms], int
+            the vertex index this boundary term applies to
+            single number for edge vertices; multiple entries for corner vertices
+        quotient : ndarray, [index, n_terms], int
+            relative element in quotient group to reach opposing element
+            how current index relates to other side of the term
+        sub : ndarray, [index, n_terms], int
+            relative subgroup transform.
+            only needed by normal transformation so far to get transformations
+        """
+        self.group.elements_tables
+        print()
+        # note: on group level, take incidence matrices, and apply group structure to them;
+        # know which triangle is incident to what vert, and so on
