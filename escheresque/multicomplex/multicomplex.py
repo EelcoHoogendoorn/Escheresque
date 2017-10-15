@@ -1,6 +1,9 @@
 
-import numpy as np
 from cached_property import cached_property
+
+import numpy as np
+import numpy_indexed as npi
+
 from pycomplex.math import linalg
 
 from escheresque.multicomplex.triangle import Schwartz
@@ -152,14 +155,15 @@ class MultiComplex(object):
         """Compute sparse matrix that applies stitching to d2 forms
         acts on flattened d2-form
 
-        that is, averaging over d2 values
-        implement as matrix-multiply?
-        boundified = boundifier * unboundified
-        or:
-        boundified = unboundified - boundifier * unboundified
-        last is better since most values should remain untouched
-        does not help much with
         """
+        info = self.boundary_info
+        r = self.ravel(info[:, 1], info[:, 0])
+        c = self.ravel(info[:, 2], info[:, 0])
+        import scipy.sparse
+        def sparse(r, c):
+            n = np.prod(self.shape_p0)
+            return scipy.sparse.coo_matrix((np.ones_like(r), (r, c)), shape=(n, n))
+        return sparse(r, c)
 
     def ravel(self, q, s):
         """Convert quotient/simplex indices into linear index of flattened form"""
@@ -173,13 +177,16 @@ class MultiComplex(object):
 
         Returns
         -------
-        vertices : ndarray, [index, n_terms], int
+        vertices : ndarray, [n_terms], int
             the vertex index this boundary term applies to
             single number for edge vertices; multiple entries for corner vertices
-        quotient : ndarray, [index, n_terms], int
+        quotient : ndarray, [n_terms], int
             relative element in quotient group to reach opposing element
             how current index relates to other side of the term
-        sub : ndarray, [index, n_terms], int
+        neighbor : ndarray, [n_terms], int
+            relative element in quotient group to reach opposing element
+            how current index relates to other side of the term
+        sub : ndarray, [n_terms], int
             relative subgroup transform.
             only needed by normal transformation so far to get transformations
         """
@@ -191,31 +198,13 @@ class MultiComplex(object):
         bv = self.triangle.boundary_vertices        # [3, 1]
         be = self.triangle.boundary_edge_vertices   # [3, n_boundary_edges]
 
-        import scipy.sparse
-        def sparse(r, c):
-            n = np.prod(self.shape_p0)
-            return scipy.sparse.coo_matrix((np.ones_like(r),(r,c)), shape=(n, n))
+        def broadcast(a, b):
+            shape = len(b), len(a), 3
+            a = np.broadcast_to(a[None], shape)
+            b = np.broadcast_to(b[:, None], shape[:-1])
+            return np.concatenate([b.reshape(-1, 1), a.reshape(-1, 3)], axis=1)
 
-        acc = sparse([], [])
-        import numpy_indexed as npi
+        v = [broadcast(a, b) for a, b in zip(npi.group_by(vi[:, 0]).split(vi[:, 1:]), bv)]
+        e = [broadcast(a, b) for a, b in zip(npi.group_by(ei[:, 0]).split(ei[:, 1:]), be)]
 
-        for a, b in zip(npi.group_by(vi[:, 0]).split(vi[:, 1:]), bv):
-            q, n, s = a.T
-            # FIXME: duplicate subgroup column in the same manner
-            r = self.ravel(q[:, None], b[None, :]).flatten()
-            c = self.ravel(n[:, None], b[None, :]).flatten()
-            m = sparse(r, c)
-            acc = acc + m
-
-        for a, b in zip(npi.group_by(ei[:, 0]).split(ei[:, 1:]), be):
-            q, n, s = a.T
-            r = self.ravel(q[:, None], b[None, :]).flatten()
-            c = self.ravel(n[:, None], b[None, :]).flatten()
-            m = sparse(r, c)
-            acc = acc + m
-
-        acc = acc.tocoo()
-        import matplotlib.pyplot as plt
-        plt.scatter(acc.row, acc.col, c=acc.data)
-        plt.show()
-        print()
+        return np.concatenate(v + e, axis=0)

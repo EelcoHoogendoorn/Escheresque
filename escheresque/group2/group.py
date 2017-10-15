@@ -236,7 +236,7 @@ class TriangleGroup(Group):
         Parameters
         ----------
         t : int
-            element index
+            triangle / element index
         c : array of int, {0, 1, 2}
             set of corners that define the incidence relation;
             single element is a vertex, two elements an edge
@@ -244,7 +244,7 @@ class TriangleGroup(Group):
         Returns
         -------
         elements : ndarray, [n_incident_tris], int
-            group element idx that are incident to t,
+            set triangle / element idx that are incident to t,
             with respect to the corners c
         """
         corners = self.triangles[:, c]
@@ -320,17 +320,20 @@ class SubGroup(Group):
 
     @cached_property
     def is_chiral(self):
-        return self.description[-1] < 0
+        return np.any(self.orientation < 0)
 
     @cached_property
     def index(self):
-        """The index of the subgroup; or the number of independent tiles"""
+        """The index of the subgroup;
+        or the number of independent tiles that compose the fumdamental domain of the subgroup"""
         return self.group.order / self.order
     @cached_property
     def mirrors(self):
+        """Number of mirror transforms in the subgroup"""
         return 2 if self.is_chiral else 1
     @cached_property
     def rotations(self):
+        """Number of pure rotations in the subgroup"""
         return self.order / self.mirrors
 
     @cached_property
@@ -367,7 +370,8 @@ class SubGroup(Group):
             tuple of tables describing how n-elements in the full group map to eachother
             n-th element in the tuple pertains to n-elements
         """
-        return tuple([self.compute_table(self.representation, p) for p in self.group.complex.primal_position])
+        return tuple([self.compute_table(self.representation, p)
+                      for p in self.group.complex.primal_position])
 
     @cached_property
     def table(self):
@@ -403,11 +407,12 @@ class SubGroup(Group):
         return [self.get_orbits(t) for t in self.elements_tables]
 
     def get_coset(self, orbit):
-        """Pick a set of domains as root tiles
+        """Compute the cosets, given a labeling of all elements describing the orbits
 
         Returns
         -------
-        array_like, [n-index], of ndarray, [n-], int
+        array_like, [n-index], of ndarray, [coset_size], int
+            each array represents a set of elements that form a coset
         """
         n_tiles, labels = orbit
         cosets = npi.group_by(labels).split(np.arange(len(labels)))
@@ -415,6 +420,7 @@ class SubGroup(Group):
 
     @cached_property
     def cosets(self):
+        """Compute the cosets of all n-elements in the triangle-group"""
         return [self.get_coset(o) for o in self.orbits]
 
     @cached_property

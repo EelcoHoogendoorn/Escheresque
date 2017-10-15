@@ -62,9 +62,19 @@ def test_boundary_info():
     print(e[:, 3:].reshape(3, group.index, 2))
 
 
-    complex = MultiComplex.generate(group, 4)
+    complex = MultiComplex.generate(group, 3)
 
-    complex[-1].boundary_info
+    info = complex[-1].boundary_info
+    print(info)
+
+    acc = complex[-1].stitcher_d2
+    acc = acc.tocoo()
+    acc.sum_duplicates()
+
+    import matplotlib.pyplot as plt
+    plt.scatter(acc.row, acc.col, c=acc.data)
+    plt.show()
+    print()
 
 
 test_boundary_info()
