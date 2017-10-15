@@ -7,7 +7,10 @@ from escheresque.multicomplex.triangle import Schwartz
 
 
 class MultiComplex(object):
-    """Stitch Schwartz triangle into a complete covering of the sphere"""
+    """Stitch Schwartz triangle into a complete covering of the sphere
+
+    Perhaps SphericalSymmetricComplex is a better name?
+    """
 
     def __init__(self, group, triangle):
         """
@@ -60,7 +63,7 @@ class MultiComplex(object):
     @cached_property
     def shape_p0(self):
         """Shape of a p0 form"""
-        return self.topology.P0, self.index
+        return self.topology.n_elements[0], self.index
 
     def vertex_normals(self, radius):
         """Compute vertex normals
@@ -141,12 +144,13 @@ class MultiComplex(object):
     #     For d1p1, this means adding opposing d1 edge
     #     for p0d2, this means summing over all
     #     """
-    def boundify_d2(self, d2):
+    def stitch_d2(self, d2):
         """sum over all neighbors and divide by multiplicity"""
 
     @cached_property
-    def boundifier(self):
-        """Compute sparse matrix that applies boundification
+    def stitcher_d2(self):
+        """Compute sparse matrix that applies stitching to d2 forms
+        acts on flattened d2-form
 
         that is, averaging over d2 values
         implement as matrix-multiply?
@@ -156,6 +160,12 @@ class MultiComplex(object):
         last is better since most values should remain untouched
         does not help much with
         """
+
+    def ravel(self, q, s):
+        """Convert quotient/simplex indices into linear index of flattened form"""
+        return self.index * s + q
+    def unravel(self, idx):
+        return np.unravel_index(idx, self.shape_p0)
 
     @cached_property
     def boundary_info(self):
@@ -173,7 +183,39 @@ class MultiComplex(object):
             relative subgroup transform.
             only needed by normal transformation so far to get transformations
         """
-        self.group.elements_tables
+        #
+        vi = self.group.vertex_incidence            # [n_vertex_entries, 4]
+        ei = self.group.edge_incidence              # [n_edge_entries, 4]
+
+        # these are the vertex indices for all edges and corners of the triangle
+        bv = self.triangle.boundary_vertices        # [3, 1]
+        be = self.triangle.boundary_edge_vertices   # [3, n_boundary_edges]
+
+        import scipy.sparse
+        def sparse(r, c):
+            n = np.prod(self.shape_p0)
+            return scipy.sparse.coo_matrix((np.ones_like(r),(r,c)), shape=(n, n))
+
+        acc = sparse([], [])
+        import numpy_indexed as npi
+
+        for a, b in zip(npi.group_by(vi[:, 0]).split(vi[:, 1:]), bv):
+            q, n, s = a.T
+            # FIXME: duplicate subgroup column in the same manner
+            r = self.ravel(q[:, None], b[None, :]).flatten()
+            c = self.ravel(n[:, None], b[None, :]).flatten()
+            m = sparse(r, c)
+            acc = acc + m
+
+        for a, b in zip(npi.group_by(ei[:, 0]).split(ei[:, 1:]), be):
+            q, n, s = a.T
+            r = self.ravel(q[:, None], b[None, :]).flatten()
+            c = self.ravel(n[:, None], b[None, :]).flatten()
+            m = sparse(r, c)
+            acc = acc + m
+
+        acc = acc.tocoo()
+        import matplotlib.pyplot as plt
+        plt.scatter(acc.row, acc.col, c=acc.data)
+        plt.show()
         print()
-        # note: on group level, take incidence matrices, and apply group structure to them;
-        # know which triangle is incident to what vert, and so on

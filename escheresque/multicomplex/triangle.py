@@ -3,7 +3,7 @@ import numpy as np
 import numpy_indexed as npi
 from cached_property import cached_property
 
-from pycomplex.complex.simplicial.spherical import ComplexSpherical2
+from pycomplex.complex.simplicial.spherical import ComplexSpherical2, TopologyTriangular
 from pycomplex.geometry.euclidian import segment_normals
 
 
@@ -18,6 +18,21 @@ class Schwartz(ComplexSpherical2):
         ----------
         group : TriangleGroup
         """
+        # topology = TopologyTriangular(
+        #     elements=[
+        #         [0, 1, 2],
+        #         [[1, 2], [2, 0], [0, 1]],
+        #         [[0, 1, 2]]
+        #     ],
+        #     boundary=[
+        #         [[1, 2], [2, 0], [0, 1]],
+        #         [[0, 1, 2]]
+        #     ],
+        #     orientation=[
+        #         [[-1, 1], [-1, 1], [-1, 1]],
+        #         [[1, 1, 1]]
+        #     ]
+        # )
         triangle = Schwartz(
             vertices=group.basis[0],
             simplices=[[0, 1, 2]]
@@ -64,7 +79,7 @@ class Schwartz(ComplexSpherical2):
         try:
             return self.topology.transfer_matrices[1] * self.parent.boundary_edges_chain
         except:
-            return np.eye(3, dtype=np.int8)
+            return np.eye(3, dtype=np.int8)[::-1]
 
     @cached_property
     def boundary_edge_vertices_chain(self):

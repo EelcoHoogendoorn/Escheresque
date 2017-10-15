@@ -229,6 +229,28 @@ class TriangleGroup(Group):
         # weighted is false, since complex need not be oriented, and is symmetric
         return self.complex.pick_primal(points, weighted=False)
 
+    def incident(self, t, c):
+        """Find triangles incident to a given triangle,
+        given an incidence relation
+
+        Parameters
+        ----------
+        t : int
+            element index
+        c : array of int, {0, 1, 2}
+            set of corners that define the incidence relation;
+            single element is a vertex, two elements an edge
+
+        Returns
+        -------
+        elements : ndarray, [n_incident_tris], int
+            group element idx that are incident to t,
+            with respect to the corners c
+        """
+        corners = self.triangles[:, c]
+        incident = np.where(np.all(corners == corners[t], axis=1))[0]
+        return incident# self.divide(t, incident)
+
 
 class PolyhedralGroup(TriangleGroup):
     """TriangleGroup built from a regular polyhedron."""
@@ -385,7 +407,7 @@ class SubGroup(Group):
 
         Returns
         -------
-        ndarray, [n_tiles], int
+        array_like, [n-index], of ndarray, [n-], int
         """
         n_tiles, labels = orbit
         cosets = npi.group_by(labels).split(np.arange(len(labels)))
@@ -440,14 +462,14 @@ class SubGroup(Group):
         """Convert full group element index to quotient/subgroup pair"""
         return np.unravel_index(idx, self.product_idx.shape)
     def ravel(self, idx):
-        """Convert index/subgroup pair to full group element"""
+        """Convert quotient/subgroup pair to full group element"""
         return np.ravel_multi_index(idx, self.product_idx.shape)
 
     @cached_property
     def find_element_cache(self):
         return np.argsort(self.product_idx.flatten())
     def find_element(self, e):
-        """Find elements """
+        """Find elements in the product group, given elements in the full group"""
         idx = self.find_element_cache[e]
         return self.unravel(idx)
 
@@ -472,3 +494,67 @@ class SubGroup(Group):
         elements_idx, bary = self.group.pick(points)
         sub_idx, quotient_idx = self.find_element(elements_idx)
         return elements_idx, sub_idx, quotient_idx, bary
+
+    def incidence(self, C):
+        """Compute incidence relations between triangles
+
+        Parameters
+        ----------
+        C : list of list of [0..ndim)
+            defines the type of relation
+
+        Returns
+        -------
+        incidence : ndarray, [n_entries, 4], uint8
+            incidence relationships
+            the four columns are as follows:
+                incidence relation index: [0..ndim)
+                quotient group index: [0..index)
+                quotient group index of incident triangle
+                sub group index of incident triangle; only required for remapping normals
+        """
+        incidence = [(c, i, q, s)
+                     for c in range(self.group.complex.n_dim)
+                     for i in range(self.index)
+                     for (s, q) in zip(*self.find_element(self.group.incident(self.quotient_idx[i], C[c])))]
+        return np.asarray(incidence, dtype=np.uint8)
+
+    @cached_property
+    def vertex_incidence(self):
+        """Compute incidence relations between triangle-vertices
+
+        Returns
+        -------
+        incidence : ndarray, [n_entries, 4], uint8
+            incidence relationships around vertices
+            the four columns are as follows:
+                incidence relation index: [0..ndim)
+                quotient group index: [0..index)
+                quotient group index of incident triangle
+                sub group index of incident triangle; only required for remapping normals
+        """
+        C = [[0], [1], [2]]
+        return self.incidence(C)
+
+    @cached_property
+    def edge_incidence(self):
+        """Compute incidence relations between triangle-edges
+
+        Returns
+        -------
+        incidence : ndarray, [n_entries, 4], uint8
+            incidence relationships around vertices
+            the four columns are as follows:
+                incidence relation index: [0..ndim)
+                quotient group index: [0..index)
+                quotient group index of incident triangle
+                sub group index of incident triangle; only required for remapping normals
+
+        Notes
+        -----
+        entry-layout is chosen for compatibility with jagged structure of vertex_incidence;
+        could be more simply represented as incidence[:, 2].reshape(3, index, 2),
+        since each edge will always have two incident triangles
+        """
+        C = [[1, 2], [0, 2], [0, 1]]
+        return self.incidence(C)

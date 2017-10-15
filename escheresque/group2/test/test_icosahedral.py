@@ -48,7 +48,7 @@ def test_sub_representation():
 # quit()
 
 def test_basic():
-    group = icosahedral.Pyritohedral()
+    group = icosahedral.ChiralIcosahedral()
     full = group.group
 
     tables = group.elements_tables
@@ -60,6 +60,14 @@ def test_basic():
     print(group.product_idx)
     print(full.orientation[group.product_idx.T])
 
+    v = group.vertex_incidence
+    print(v[:, :-1])
+    e = group.edge_incidence
+    print(e[:, :-1])
+
+    print(e[:, 2].reshape(3, group.index, 2))
+
+test_basic()
 
 def test_pick():
     group = icosahedral.Pyritohedral()
@@ -92,4 +100,4 @@ def test_pick():
 
     plt.show()
 
-test_pick()
+# test_pick()

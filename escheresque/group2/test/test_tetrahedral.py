@@ -43,4 +43,5 @@ def test_basic():
     print(np.sign(np.linalg.det(group.group.representation[group.product_idx])))
 
 
+
 test_basic()

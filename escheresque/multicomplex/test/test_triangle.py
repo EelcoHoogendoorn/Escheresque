@@ -34,4 +34,6 @@ def test_boundary_edge():
     print(triangle.boundary_vertices)
     print(triangle.boundary_edge_vertices)
 
+test_boundary_edge()
+
 
