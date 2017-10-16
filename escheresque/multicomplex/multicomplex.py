@@ -120,51 +120,6 @@ class MultiComplex(object):
             hierarchy.append(child)
         return hierarchy
 
-    # def grad(self):
-    #     """gradient operator, from p0 to p1 forms"""
-    #     T01 = self.triangle.topology.matrices[0]
-    #     def inner(x):
-    #         return T01 * x
-    #     return inner
-    #
-    # def div(self):
-    #     """divergence operator, from d1 to d2 forms"""
-    #     T01 = self.triangle.topology.matrices[0]
-    #     def inner(x):
-    #         return T01.T * x
-    #     return inner
-    #
-    # @cached_property
-    # def laplace(self):
-    #     """Laplace from """
-    #     T01 = self.triangle.topology.matrices[0]
-    #     return T01.T *
-    # @cached_property
-    # def hodge_DP(self):
-    #     """Compute boundified hodges;
-    #     make elements act as their symmetry-completed counterparts
-    #
-    #     For d1p1, this means adding opposing d1 edge
-    #     for p0d2, this means summing over all
-    #     """
-    def stitch_d2(self, d2):
-        """sum over all neighbors and divide by multiplicity"""
-
-    @cached_property
-    def stitcher_d2(self):
-        """Compute sparse matrix that applies stitching to d2 forms
-        acts on flattened d2-form
-
-        """
-        info = self.boundary_info
-        r = self.ravel(info[:, 1], info[:, 0])
-        c = self.ravel(info[:, 2], info[:, 0])
-        import scipy.sparse
-        def sparse(r, c):
-            n = np.prod(self.shape_p0)
-            return scipy.sparse.coo_matrix((np.ones_like(r), (r, c)), shape=(n, n))
-        return sparse(r, c)
-
     def ravel(self, q, s):
         """Convert quotient/simplex indices into linear index of flattened form"""
         return self.index * s + q
@@ -208,3 +163,77 @@ class MultiComplex(object):
         e = [broadcast(a, b) for a, b in zip(npi.group_by(ei[:, 0]).split(ei[:, 1:]), be)]
 
         return np.concatenate(v + e, axis=0)
+
+    @cached_property
+    def stitcher_d2_flat(self):
+        """Compute sparse matrix that applies stitching to d2 forms
+        acts on flattened d2-form
+
+        Returns
+        -------
+        sparse matrix
+        """
+        info = self.boundary_info
+        info = info[info[:, 1] != info[:, 2]]   # remove diagonal
+        r = self.ravel(info[:, 1], info[:, 0])
+        c = self.ravel(info[:, 2], info[:, 0])
+        import scipy.sparse
+        def sparse(r, c):
+            n = np.prod(self.shape_p0)
+            return scipy.sparse.coo_matrix((np.ones_like(r), (r, c)), shape=(n, n))
+        return sparse(r, c)
+
+    @cached_property
+    def stitcher_d2(self):
+        """sum over all neighbors and divide by multiplicity
+
+        Returns
+        -------
+        callable (d2) -> (d2)
+        """
+        return lambda x: x + (self.stitcher_d2_flat * x.flatten()).reshape(self.shape_p0)
+
+    @cached_property
+    def laplacian(self):
+        """Laplacian operator from p0 to d2
+
+        Returns
+        -------
+        callable : (p0) -> (d2)
+        """
+        T01 = self.triangle.topology.matrices[0]
+        hodge_D1P1 = self.triangle.hodge_DP[1][:, None]
+        return lambda x: T01 * (hodge_D1P1 * (T01.T * x))
+
+    @cached_property
+    def laplacian_stitched(self):
+        """Laplacian operator from p0 to d2
+
+        Returns
+        -------
+        callable (p0) -> (d2)
+        """
+        return lambda x: self.stitcher_d2(self.laplacian(x))
+
+    @cached_property
+    def laplacian_stitched_operator(self):
+        """Flat linear operator form of laplacian"""
+        from scipy.sparse.linalg import LinearOperator
+        n = np.prod(self.shape_p0)
+        f = lambda x: self.laplacian_stitched(x.reshape(self.shape_p0)).reshape(n)
+        return LinearOperator((n, n), f, f)
+
+    @cached_property
+    def hodge_DP(self):
+        """Compute stitched hodges;
+        make elements act as their symmetry-completed counterparts
+
+        Notes
+        -----
+        only implemented for p0 so far
+        """
+        h = np.broadcast_to(self.triangle.hodge_DP[0][:, None], self.shape_p0)
+        return [self.stitcher_d2(h), None, None]
+
+    def plot_p0_form(self, p0):
+        """Simple matplotlib debug viz"""
