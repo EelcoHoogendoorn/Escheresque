@@ -237,3 +237,20 @@ class MultiComplex(object):
 
     def plot_p0_form(self, p0):
         """Simple matplotlib debug viz"""
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(1, 1)
+        R = linalg.orthonormalize(np.random.randn(3, 3))
+        triangle = self.triangle.as_euclidian()  # .transform(R)
+        for s in range(self.group.order):
+            for i in range(self.group.index):
+                ei = self.group.product_idx[s, i]
+                e = self.group.group.representation[ei]
+                flip = self.group.group.orientation[ei] < 0
+                tile = triangle.transform(e).transform(R)
+                tile.plot_primal_0_form(p0[:, i], ax=ax, cmap='terrain',
+                                        plot_contour=False, shading='gouraud',
+                                        backface_culling=True, flip_normals=flip)
+                # for s in range(group.order):
+
+        plt.axis('off')
+        plt.show()

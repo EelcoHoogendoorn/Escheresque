@@ -9,10 +9,10 @@ from escheresque.algorithms.perlin import perlin_noise
 if __name__ == '__main__':
     from escheresque.multicomplex.multicomplex import MultiComplex
     from escheresque.group2.octahedral import ChiralOctahedral, Pyritohedral, ChiralTetrahedral, ChiralDihedral2
-    group = ChiralOctahedral()
-    complex = MultiComplex.generate(group, 4)[-1]
+    group = Pyritohedral()
+    complex = MultiComplex.generate(group, 2)[-1]
 
-    field = perlin_noise(
+    p0 = perlin_noise(
         complex,
         [
             (.0, .1),
@@ -20,26 +20,11 @@ if __name__ == '__main__':
             # (.4, .4),
         ]
     )
+    p0 = complex.stitcher_d2(complex.triangle.hodge_DP[0][:, None] * p0) / complex.hodge_DP[0]
 
-    print (field.min(), field.max())
+    print (p0.min(), p0.max())
 
-    R = linalg.orthonormalize(np.random.randn(3, 3))
-    triangle = complex.triangle.as_euclidian()#.transform(R)
-    fig, ax = plt.subplots(1, 1)
-    for s in range(group.order):
-        # apply index transform
-        # R = group.group.representation[s]
-        # print(np.round(R, 2))
-        for i in range(group.index):
-            ei = group.product_idx[s, i]
-            e = group.group.representation[ei]
-            flip = np.sign(np.linalg.det(e))
-            tile = triangle.transform(e)
-            tile.plot_primal_0_form(field[:, i], ax=ax, cmap='terrain', plot_contour=False, shading='gouraud', backface_culling=True)
-        # for s in range(group.order):
-
-    plt.axis('off')
-    plt.show()
+    complex.plot_p0_form(p0)
 
 
     # water_level = 0.42

@@ -34,7 +34,6 @@ class Diffusor(object):
     def inverse_mass_operator(self):
         return self.precompute[2]
 
-
     @cached_property
     def largest_eigenvalue(self):
         # compute largest eigenvalue, for optimally scaled explicit timestepping
@@ -79,8 +78,8 @@ class Diffusor(object):
         """
         distance = self.largest_eigenvalue * dt
         steps = int(np.ceil(distance))
-        fraction = distance / steps
         for i in range(steps):
+            fraction = distance / steps
             field = self.explicit_step(field, fraction)
         return field
 
