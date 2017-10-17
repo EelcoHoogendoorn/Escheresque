@@ -26,14 +26,16 @@ if __name__ == '__main__':
     R = linalg.orthonormalize(np.random.randn(3, 3))
     triangle = complex.triangle.as_euclidian()#.transform(R)
     fig, ax = plt.subplots(1, 1)
-    for e in range(group.order):
+    for s in range(group.order):
         # apply index transform
-        R = group.group.representation[e]
-        print(np.round(R, 2))
-        tile = triangle.transform(R)
+        # R = group.group.representation[s]
+        # print(np.round(R, 2))
         for i in range(group.index):
-            R = group.group.representation[group.quotient_idx[i]]
-            tile.transform(R).plot_primal_0_form(field[:, i], ax=ax, cmap='terrain', plot_contour=False, shading='gouraud')
+            ei = group.product_idx[s, i]
+            e = group.group.representation[ei]
+            flip = np.sign(np.linalg.det(e))
+            tile = triangle.transform(e)
+            tile.plot_primal_0_form(field[:, i], ax=ax, cmap='terrain', plot_contour=False, shading='gouraud', backface_culling=True)
         # for s in range(group.order):
 
     plt.axis('off')
