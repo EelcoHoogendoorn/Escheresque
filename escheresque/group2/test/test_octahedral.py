@@ -118,3 +118,10 @@ def test_basic():
     print(tables[2])
     print(orbits[tables[2]])
     print(npi.count(orbits[tables[2]]))
+
+
+def test_shape():
+    group = octahedral.Pyritohedral()
+    group.group.complex.plot(plot_dual=False)
+    import matplotlib.pyplot as plt
+    plt.show()

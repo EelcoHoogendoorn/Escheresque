@@ -1,5 +1,6 @@
 """"Generate Perlin noise on a sphere"""
 
+import numpy as np
 import matplotlib.pyplot as plt
 from pycomplex.math import linalg
 from escheresque.algorithms.perlin import perlin_noise
@@ -7,8 +8,8 @@ from escheresque.algorithms.perlin import perlin_noise
 
 if __name__ == '__main__':
     from escheresque.multicomplex.multicomplex import MultiComplex
-    from escheresque.group2.octahedral import Pyritohedral, ChiralTetrahedral, ChiralDihedral2
-    group = Pyritohedral()
+    from escheresque.group2.octahedral import ChiralOctahedral, Pyritohedral, ChiralTetrahedral, ChiralDihedral2
+    group = ChiralOctahedral()
     complex = MultiComplex.generate(group, 4)[-1]
 
     field = perlin_noise(
@@ -22,9 +23,17 @@ if __name__ == '__main__':
 
     print (field.min(), field.max())
 
-    for i in range(group.index):
+    R = linalg.orthonormalize(np.random.randn(3, 3))
+    triangle = complex.triangle.as_euclidian()#.transform(R)
+    fig, ax = plt.subplots(1, 1)
+    for e in range(group.order):
         # apply index transform
-        complex.triangle.as_euclidian().plot_primal_0_form(field[:, i], cmap='terrain', plot_contour=False, shading='gouraud')
+        R = group.group.representation[e]
+        print(np.round(R, 2))
+        tile = triangle.transform(R)
+        for i in range(group.index):
+            R = group.group.representation[group.quotient_idx[i]]
+            tile.transform(R).plot_primal_0_form(field[:, i], ax=ax, cmap='terrain', plot_contour=False, shading='gouraud')
         # for s in range(group.order):
 
     plt.axis('off')
