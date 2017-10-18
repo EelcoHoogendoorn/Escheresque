@@ -9,8 +9,9 @@ from escheresque.algorithms.perlin import perlin_noise
 if __name__ == '__main__':
     from escheresque.multicomplex.multicomplex import MultiComplex
     from escheresque.group2.octahedral import ChiralOctahedral, Pyritohedral, ChiralTetrahedral, ChiralDihedral2
+    # from escheresque.group2.icosahedral import Pyritohedral
     group = Pyritohedral()
-    complex = MultiComplex.generate(group, 2)[-1]
+    complex = MultiComplex.generate(group, 3)[-1]
 
     p0 = perlin_noise(
         complex,
@@ -20,8 +21,11 @@ if __name__ == '__main__':
             # (.4, .4),
         ]
     )
+    # FIXME: this still works really poorly; what does it take
     p0 = complex.stitcher_d2(complex.triangle.hodge_DP[0][:, None] * p0) / complex.hodge_DP[0]
 
+    print(complex.hodge_DP[0])
+    print(complex.stitcher_d2(np.ones(complex.shape_p0)))
     print (p0.min(), p0.max())
 
     complex.plot_p0_form(p0)

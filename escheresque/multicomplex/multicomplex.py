@@ -250,7 +250,5 @@ class MultiComplex(object):
                 tile.plot_primal_0_form(p0[:, i], ax=ax, cmap='terrain',
                                         plot_contour=False, shading='gouraud',
                                         backface_culling=True, flip_normals=flip)
-                # for s in range(group.order):
-
-        plt.axis('off')
+        ax.axis('off')
         plt.show()
