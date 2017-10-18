@@ -184,6 +184,46 @@ class MultiComplex(object):
         return sparse(r, c)
 
     @cached_property
+    def stitch_groups(self):
+        info = self.boundary_info
+        groups = npi.group_by(info[:, :2])
+        return groups
+
+    def alt_stitch_p0(self, p0):
+        """stitching using npi
+
+        This can serve as a template for elegant normal stitching
+        """
+        info = self.boundary_info
+        groups = self.stitch_groups
+        bt = p0[info[:, 0], info[:, 2]]
+        id, mean = groups.mean(bt)
+        p0 = p0.copy()
+        p0[id[:, 0], id[:, 1]] = mean
+        return p0
+
+    def stitch_normals(self, normals):
+        """Stitch normals
+
+        Parameters
+        ----------
+        normals : ndarray, [n_vertices, index, 3], float
+
+        Returns
+        -------
+        normals : ndarray, [n_vertices, index, 3], float
+        """
+        info = self.boundary_info
+        groups = self.stitch_groups
+        r = self.group.group.representation[info[:, 3]]
+        bt = normals[info[:, 0], info[:, 2]]
+        bt = np.einsum('bij,bj->bi', r, bt)
+        id, sum = groups.sum(bt)
+        normals = normals.copy()
+        normals[id[:, 0], id[:, 1]] = sum
+        return normals
+
+    @cached_property
     def stitcher_d2(self):
         """sum over all neighbors
 
@@ -246,6 +286,7 @@ class MultiComplex(object):
         fig, ax = plt.subplots(1, 1)
         R = linalg.orthonormalize(np.random.randn(3, 3))
         triangle = self.triangle.as_euclidian()  # .transform(R)
+        vmin, vmax = p0.min(), p0.max()
         for s in range(self.group.order):
             for i in range(self.group.index):
                 ei = self.group.product_idx[s, i]
@@ -254,6 +295,7 @@ class MultiComplex(object):
                 tile = triangle.transform(e).transform(R)
                 tile.plot_primal_0_form(p0[:, i], ax=ax, cmap='terrain',
                                         plot_contour=False, shading='gouraud',
-                                        backface_culling=True, flip_normals=flip)
+                                        backface_culling=True, flip_normals=flip,
+                                        vmin=vmin, vmax=vmax)
         ax.axis('off')
         plt.show()
