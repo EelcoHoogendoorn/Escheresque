@@ -51,15 +51,15 @@ def test_boundary_info():
     from escheresque.group2.octahedral import ChiralOctahedral
 
     group = ChiralTetrahedral()
-    group = Pyritohedral()
+    group = ChiralOctahedral()
 
-    v = group.vertex_incidence
+    # v = group.vertex_incidence
     # v2 = group2.vertex_incidence
 
-    print(v[:, :-1])
-    e = group.edge_incidence
-    print(e[:, :-1])
-    print(e[:, 3:].reshape(3, group.index, 2))
+    # print(v[:, :-1])
+    # e = group.edge_incidence
+    # print(e[:, :-1])
+    # print(e[:, 3:].reshape(3, group.index, 2))
 
 
     complex = MultiComplex.generate(group, 3)
@@ -67,7 +67,7 @@ def test_boundary_info():
     info = complex[-1].boundary_info
     print(info)
 
-    acc = complex[-1].stitcher_d2
+    acc = complex[-1].stitcher_d2_flat
     acc = acc.tocoo()
     acc.sum_duplicates()
 

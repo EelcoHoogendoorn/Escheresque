@@ -20,22 +20,23 @@ class Schwartz(ComplexSpherical2):
         """
         # topology = TopologyTriangular(
         #     elements=[
-        #         [0, 1, 2],
-        #         [[1, 2], [2, 0], [0, 1]],
-        #         [[0, 1, 2]]
+        #         np.asarray([0, 1, 2]),
+        #         np.asarray([[1, 2], [2, 0], [0, 1]]),
+        #         np.asarray([[0, 1, 2]])
         #     ],
         #     boundary=[
-        #         [[1, 2], [2, 0], [0, 1]],
-        #         [[0, 1, 2]]
+        #         np.asarray([[1, 2], [2, 0], [0, 1]]),
+        #         np.asarray([[0, 1, 2]])
         #     ],
         #     orientation=[
-        #         [[-1, 1], [-1, 1], [-1, 1]],
-        #         [[1, 1, 1]]
+        #         np.asarray([[-1, 1], [-1, 1], [-1, 1]]),
+        #         np.asarray([[1, 1, 1]])
         #     ]
         # )
         triangle = Schwartz(
             vertices=group.basis[0],
             simplices=[[0, 1, 2]]
+            # topology=topology
         )
         triangle.group = group
         return triangle
@@ -79,7 +80,7 @@ class Schwartz(ComplexSpherical2):
         try:
             return self.topology.transfer_matrices[1] * self.parent.boundary_edges_chain
         except:
-            return np.eye(3, dtype=np.int8)[::-1]
+            return np.eye(3, dtype=np.int8)[self.topology._boundary[1][0]]
 
     @cached_property
     def boundary_edge_vertices_chain(self):

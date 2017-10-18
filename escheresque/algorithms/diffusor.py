@@ -79,7 +79,7 @@ class Diffusor(object):
         distance = self.largest_eigenvalue * dt
         steps = int(np.ceil(distance))
         for i in range(steps):
-            fraction = distance / steps
+            fraction = distance / steps / 1e0
             field = self.explicit_step(field, fraction)
         return field
 

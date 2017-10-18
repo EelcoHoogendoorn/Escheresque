@@ -9,25 +9,33 @@ from escheresque.algorithms.perlin import perlin_noise
 if __name__ == '__main__':
     from escheresque.multicomplex.multicomplex import MultiComplex
     from escheresque.group2.octahedral import ChiralOctahedral, Pyritohedral, ChiralTetrahedral, ChiralDihedral2
-    # from escheresque.group2.icosahedral import Pyritohedral
-    group = Pyritohedral()
-    complex = MultiComplex.generate(group, 3)[-1]
+    from escheresque.group2.icosahedral import Pyritohedral, ChiralIcosahedral
+    group = ChiralTetrahedral()
+    complex = MultiComplex.generate(group, 5)[-1]
+
+
+
+    print(complex.hodge_DP[0])
+    print(complex.stitcher_d2(np.ones(complex.shape_p0)))
+
 
     p0 = perlin_noise(
         complex,
         [
-            (.0, .1),
-            # (.2, .2),
-            # (.4, .4),
+            (.01, .01),
+            (.02, .02),
+            (.04, .04),
+            (.08, .08),
         ]
     )
+    # p0 = np.random.rand(*complex.shape_p0)
+    # print (p0.min(), p0.max())
+
     # FIXME: this still works really poorly; what does it take
-    p0 = complex.stitcher_d2(complex.triangle.hodge_DP[0][:, None] * p0) / complex.hodge_DP[0]
+    p0 = complex.stitcher_p0(p0)
 
-    print(complex.hodge_DP[0])
-    print(complex.stitcher_d2(np.ones(complex.shape_p0)))
-    print (p0.min(), p0.max())
-
+    # print()
+    # p0[complex.triangle.boundary_edge_vertices[2], :] = 10
     complex.plot_p0_form(p0)
 
 

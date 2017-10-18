@@ -174,7 +174,7 @@ class MultiComplex(object):
         sparse matrix
         """
         info = self.boundary_info
-        info = info[info[:, 1] != info[:, 2]]   # remove diagonal
+        info = info[~np.logical_and(info[:, 1] == info[:, 2], info[:, 3] == 0)]   # remove diagonal
         r = self.ravel(info[:, 1], info[:, 0])
         c = self.ravel(info[:, 2], info[:, 0])
         import scipy.sparse
@@ -185,17 +185,22 @@ class MultiComplex(object):
 
     @cached_property
     def stitcher_d2(self):
-        """sum over all neighbors and divide by multiplicity
+        """sum over all neighbors
 
         Returns
         -------
         callable (d2) -> (d2)
         """
-        return lambda x: x + (self.stitcher_d2_flat * x.flatten()).reshape(self.shape_p0)
+        return lambda d2: d2 + (self.stitcher_d2_flat * d2.flatten()).reshape(self.shape_p0)
+
+    @cached_property
+    def stitcher_p0(self):
+        return lambda p0: self.stitcher_d2(self.triangle.hodge_DP[0][:, None] * p0) / self.hodge_DP[0]
+
 
     @cached_property
     def laplacian(self):
-        """Laplacian operator from p0 to d2
+        """Laplacian operator from p0 to d2, unstitched
 
         Returns
         -------
@@ -203,7 +208,7 @@ class MultiComplex(object):
         """
         T01 = self.triangle.topology.matrices[0]
         hodge_D1P1 = self.triangle.hodge_DP[1][:, None]
-        return lambda x: T01 * (hodge_D1P1 * (T01.T * x))
+        return lambda p0: T01 * (hodge_D1P1 * (T01.T * p0))
 
     @cached_property
     def laplacian_stitched(self):
@@ -213,14 +218,14 @@ class MultiComplex(object):
         -------
         callable (p0) -> (d2)
         """
-        return lambda x: self.stitcher_d2(self.laplacian(x))
+        return lambda p0: self.stitcher_d2(self.laplacian(p0))
 
     @cached_property
     def laplacian_stitched_operator(self):
         """Flat linear operator form of laplacian"""
         from scipy.sparse.linalg import LinearOperator
         n = np.prod(self.shape_p0)
-        f = lambda x: self.laplacian_stitched(x.reshape(self.shape_p0)).reshape(n)
+        f = lambda flat_p0: self.laplacian_stitched(flat_p0.reshape(self.shape_p0)).reshape(n)
         return LinearOperator((n, n), f, f)
 
     @cached_property
