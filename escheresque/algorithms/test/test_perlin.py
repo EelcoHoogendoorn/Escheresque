@@ -11,7 +11,7 @@ if __name__ == '__main__':
     from escheresque.group2.octahedral import ChiralOctahedral, Pyritohedral, ChiralTetrahedral, ChiralDihedral2
     # from escheresque.group2.icosahedral import Pyritohedral, ChiralIcosahedral
     group = ChiralTetrahedral()
-    complex = MultiComplex.generate(group, 5)[-1]
+    complex = MultiComplex.generate(group, 6)[-1]
 
 
     p0 = perlin_noise(

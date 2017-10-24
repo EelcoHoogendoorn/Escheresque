@@ -7,6 +7,7 @@ class Diffusor(object):
     """Object to manage diffusion operations over primal 0-forms
 
     Currently implements explicit integration, no multigrid
+    leave that to seperate class building upon this one
     """
 
     def __init__(self, complex):
@@ -36,11 +37,18 @@ class Diffusor(object):
 
     @cached_property
     def largest_eigenvalue(self):
-        # compute largest eigenvalue, for optimally scaled explicit timestepping
+        """Compute largest eigenvalue, for optimally scaled explicit timestepping"""
         return scipy.sparse.linalg.eigsh(
             self.laplacian,
             M=scipy.sparse.diags(self.mass).tocsc(),
             k=1, which='LM', tol=1e-6, return_eigenvectors=False)
+
+    @cached_property
+    def smallest_eigenvalues(self):
+        return scipy.sparse.linalg.eigsh(
+            self.laplacian,
+            M=scipy.sparse.diags(self.mass).tocsc(),
+            k=10, which='SM', tol=1e-6, return_eigenvectors=True)
 
     def explicit_step(self, field, fraction=1):
         """Forward Euler timestep

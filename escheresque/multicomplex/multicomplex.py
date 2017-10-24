@@ -280,6 +280,10 @@ class MultiComplex(object):
         h = np.broadcast_to(self.triangle.hodge_DP[0][:, None], self.shape_p0)
         return [self.stitcher_d2(h), None, None]
 
+    @cached_property
+    def hodge_PD(self):
+        return [None if h is None else 1. / h for h in self.hodge_DP]
+
     def plot_p0_form(self, p0):
         """Simple matplotlib debug viz"""
         import matplotlib.pyplot as plt

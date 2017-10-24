@@ -17,8 +17,6 @@ def perlin_noise(complex, octaves):
         primal 0-form
 
     """
-    diffusor = Diffusor(complex)
-    print(diffusor.largest_eigenvalue)
     def normalize(x):
         x -= x.min()
         return x / x.max()
@@ -26,4 +24,6 @@ def perlin_noise(complex, octaves):
         noise = np.random.rand(*complex.shape_p0)
         noise = complex.stitcher_p0(noise)
         return normalize(diffusor.integrate_explicit_sigma(noise, s)) ** 1.5 * a
+
+    diffusor = Diffusor(complex)
     return normalize(sum(level(*o) for o in octaves))
