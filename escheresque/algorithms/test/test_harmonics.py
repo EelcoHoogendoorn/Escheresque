@@ -5,12 +5,13 @@
 
 from escheresque.algorithms.harmonics import Harmonics
 
+
 if __name__ == '__main__':
     from escheresque.multicomplex.multicomplex import MultiComplex
     from escheresque.group2.octahedral import ChiralOctahedral, Pyritohedral, ChiralTetrahedral, ChiralDihedral2
     # from escheresque.group2.icosahedral import Pyritohedral, ChiralIcosahedral
     group = ChiralTetrahedral()
-    complex = MultiComplex.generate(group, 1)[-1]
+    complex = MultiComplex.generate(group, 4)[-1]
 
     harmonics = Harmonics(complex)
 
@@ -21,5 +22,5 @@ if __name__ == '__main__':
     # l, v = harmonics.smallest_eigenvalues
     print(l)
 
-    complex.plot_p0_form(v[1])
+    complex.plot_p0_form(v[3])
 

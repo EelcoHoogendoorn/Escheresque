@@ -269,6 +269,14 @@ class MultiComplex(object):
         return LinearOperator((n, n), f, f)
 
     @cached_property
+    def laplacian_stitched_operator_symm(self):
+        """Flat linear operator form of laplacian, symmetrized by right-mult with stitch-transpose"""
+        from scipy.sparse.linalg import LinearOperator
+        n = np.prod(self.shape_p0)
+        f = lambda flat_p0: self.laplacian_stitched((self.stitcher_d2_flat.T * flat_p0).reshape(self.shape_p0)).reshape(n)
+        return LinearOperator((n, n), f, f)
+
+    @cached_property
     def hodge_DP(self):
         """Compute stitched hodges;
         make elements act as their symmetry-completed counterparts
